@@ -177,18 +177,12 @@ function initStorlySwipers() {
     });
   });
 
-  // 4. Product Sliders & Featured Carousels
-  const productSliderSelectors = [
+  // 4a. Multi-Column Product Sliders & Featured Carousels (4-5 per row)
+  const multiProductSelectors = [
     '.best-selling-tab-slider',
     '.best-selling-product-slider',
     '.new-item-product-slider',
     '.related-product-slider',
-    '.top-rated-slider',
-    '.top-items-slider',
-    '.popular-items-slider',
-    '.hot-picks-slider',
-    '.top-picks-slider',
-    '.trending-product-slider',
     '.best-selling-coffee-slider',
     '.fresh-brews-slider',
     '.beauty-22-slider',
@@ -196,27 +190,19 @@ function initStorlySwipers() {
     '.deal-9-slider'
   ];
 
-  productSliderSelectors.forEach(sel => {
+  multiProductSelectors.forEach(sel => {
     document.querySelectorAll(sel).forEach(el => {
       if (el.swiper) return;
       const parent = el.closest('section, .custom-container') || el.parentElement;
-      
-      let nextBtn = null;
-      let prevBtn = null;
-      if (parent) {
-        const prefix = sel.replace('.', '').replace('-slider', '');
-        nextBtn = parent.querySelector(`.${prefix}-next, .best-selling-next, .related-product-next, .top-rated-next, .top-items-next, .swiper-button-next`);
-        prevBtn = parent.querySelector(`.${prefix}-prev, .best-selling-prev, .related-product-prev, .top-rated-prev, .top-items-prev, .swiper-button-prev`);
-      }
+      const prefix = sel.replace('.', '').replace('-slider', '');
+      const nextBtn = parent ? parent.querySelector(`.${prefix}-next, .best-selling-next, .related-product-next, .swiper-button-next`) : null;
+      const prevBtn = parent ? parent.querySelector(`.${prefix}-prev, .best-selling-prev, .related-product-prev, .swiper-button-prev`) : null;
 
       new Swiper(el, {
         slidesPerView: 1,
         spaceBetween: 16,
         speed: 500,
-        navigation: {
-          nextEl: nextBtn,
-          prevEl: prevBtn,
-        },
+        navigation: { nextEl: nextBtn, prevEl: prevBtn },
         pagination: {
           el: parent ? parent.querySelector('.new-launch-item-pagination, .swiper-pagination') : null,
           clickable: true,
@@ -228,6 +214,34 @@ function initStorlySwipers() {
           1280: { slidesPerView: 4, spaceBetween: 24 },
           1536: { slidesPerView: 5, spaceBetween: 24 }
         }
+      });
+    });
+  });
+
+  // 4b. Single-Column Stacked Sliders (Top Rated, Top Items, Trending - strictly 1 slide visible per column)
+  const columnStackedSelectors = [
+    '.top-rated-slider',
+    '.top-items-slider',
+    '.popular-items-slider',
+    '.trending-product-slider',
+    '.hot-picks-slider',
+    '.top-picks-slider'
+  ];
+
+  columnStackedSelectors.forEach(sel => {
+    document.querySelectorAll(sel).forEach(el => {
+      if (el.swiper) return;
+      const parent = el.closest('section, .custom-container, .overflow-hidden') || el.parentElement;
+      const prefix = sel.replace('.', '').replace('-slider', '');
+      const nextBtn = parent ? parent.querySelector(`.${prefix}-next, .swiper-button-next`) : null;
+      const prevBtn = parent ? parent.querySelector(`.${prefix}-prev, .swiper-button-prev`) : null;
+
+      new Swiper(el, {
+        slidesPerView: 1,
+        spaceBetween: 24,
+        speed: 500,
+        watchOverflow: true,
+        navigation: { nextEl: nextBtn, prevEl: prevBtn }
       });
     });
   });

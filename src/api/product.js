@@ -304,7 +304,7 @@
     },
 
     /**
-     * Exact 1:1 Horizontal Mini-Card Generator Matching image.png (For Top Rated & Top Items)
+     * Exact 1:1 Horizontal Mini-Card Generator Matching image.png and index.html Template
      */
     generateHorizontalItemHtml(product) {
       if (!product) return '';
@@ -314,36 +314,43 @@
       const mrp = product.mrp && product.mrp > product.price ? this.formatPrice(product.mrp) : '';
       const img = this.getImageUrl(product, 0);
 
-      return '<li class="flex flex-col gap-4 rounded-2xl border border-gray-200 bg-white p-4 sm:flex-row items-center transition-all duration-300 hover:shadow-md hover:border-primary-main">' +
-        '<a class="flex size-24 sm:size-28 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gray-50 p-2" href="product-details-6.html?id=' + encodeURIComponent(id) + '">' +
-          '<img alt="' + name + '" class="max-h-full max-w-full object-contain rounded-xl transition-transform duration-300 hover:scale-110" src="' + img + '" onerror="this.onerror=null;this.src=\'src/images/home-1/best-selling-tabs/product-1.webp\';" />' +
+      return '<li class="flex flex-col gap-4 rounded-xl border border-gray-300 bg-white p-4 sm:flex-row items-center transition-all duration-300 hover:shadow-md hover:border-primary-main">' +
+        '<a class="flex w-full shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gray-50 p-2 sm:size-32" href="product-details-6.html?id=' + encodeURIComponent(id) + '">' +
+          '<img alt="' + name + '" class="h-full w-full rounded-xl transition-transform duration-300 hover:scale-110 object-contain" src="' + img + '" onerror="this.onerror=null;this.src=\'src/images/home-1/best-selling-tabs/product-1.webp\';" />' +
         '</a>' +
-        '<div class="flex flex-1 flex-col justify-between w-full min-w-0 h-full">' +
-          '<div class="space-y-2">' +
+        '<div class="flex flex-1 flex-col justify-between w-full h-full min-w-0">' +
+          '<div class="space-y-3">' +
             '<h4>' +
-              '<a class="text-gray-900 hover:text-primary-main line-clamp-2 text-sm sm:text-base font-semibold leading-snug" href="product-details-6.html?id=' + encodeURIComponent(id) + '">' +
+              '<a class="text-gray-primary hover:text-primary-main line-clamp-2 text-base leading-6 font-medium" href="product-details-6.html?id=' + encodeURIComponent(id) + '">' +
                 name +
               '</a>' +
             '</h4>' +
-            '<div class="flex items-center gap-1 text-amber-400">' +
+            '<div class="flex items-center gap-1">' +
               '<div class="flex items-center">' +
-                '<svg class="size-4" fill="#FFC107" viewBox="0 0 18 18"><path d="M13.17 15.75L9 13.665 4.83 15.75l.75-4.223L1.75 7.65l4.275-.623L8.325 1.92 9.675 1.92l1.905 3.84 4.275.623-3.09 3.002.75 4.222z"/></svg>' +
-                '<svg class="size-4" fill="#FFC107" viewBox="0 0 18 18"><path d="M13.17 15.75L9 13.665 4.83 15.75l.75-4.223L1.75 7.65l4.275-.623L8.325 1.92 9.675 1.92l1.905 3.84 4.275.623-3.09 3.002.75 4.222z"/></svg>' +
-                '<svg class="size-4" fill="#FFC107" viewBox="0 0 18 18"><path d="M13.17 15.75L9 13.665 4.83 15.75l.75-4.223L1.75 7.65l4.275-.623L8.325 1.92 9.675 1.92l1.905 3.84 4.275.623-3.09 3.002.75 4.222z"/></svg>' +
-                '<svg class="size-4" fill="#FFC107" viewBox="0 0 18 18"><path d="M13.17 15.75L9 13.665 4.83 15.75l.75-4.223L1.75 7.65l4.275-.623L8.325 1.92 9.675 1.92l1.905 3.84 4.275.623-3.09 3.002.75 4.222z"/></svg>' +
-                '<svg class="size-4 opacity-40" fill="#919EAB" viewBox="0 0 18 18"><path d="M13.17 15.75L9 13.665 4.83 15.75l.75-4.223L1.75 7.65l4.275-.623L8.325 1.92 9.675 1.92l1.905 3.84 4.275.623-3.09 3.002.75 4.222z"/></svg>' +
+                '<svg fill="none" height="18" viewBox="0 0 18 18" width="18" xmlns="http://www.w3.org/2000/svg"><path d="M13.1701 15.7502C13.0501 15.7506 12.9318 15.7222 12.8251 15.6677L9.00009 13.6652L5.17509 15.6677C4.92169 15.8009 4.61453 15.7783 4.38341 15.6093C4.15228 15.4402 4.03751 15.1545 4.08759 14.8727L4.83759 10.6502L1.74759 7.65015C1.55113 7.45398 1.479 7.16559 1.56009 6.90015C1.64877 6.62822 1.8844 6.4304 2.16759 6.39015L6.44259 5.76765L8.32509 1.92015C8.4504 1.66141 8.71259 1.49707 9.00009 1.49707C9.28758 1.49707 9.54977 1.66141 9.67509 1.92015L11.5801 5.76015L15.8551 6.38265C16.1383 6.4229 16.3739 6.62072 16.4626 6.89265C16.5437 7.15809 16.4715 7.4466 16.2751 7.64265L13.1851 10.6427L13.9351 14.8652C13.9898 15.1523 13.8727 15.445 13.6351 15.6152C13.4993 15.7103 13.3357 15.7578 13.1701 15.7502Z" fill="#FFC107"></path></svg>' +
+                '<svg fill="none" height="18" viewBox="0 0 18 18" width="18" xmlns="http://www.w3.org/2000/svg"><path d="M13.1701 15.7502C13.0501 15.7506 12.9318 15.7222 12.8251 15.6677L9.00009 13.6652L5.17509 15.6677C4.92169 15.8009 4.61453 15.7783 4.38341 15.6093C4.15228 15.4402 4.03751 15.1545 4.08759 14.8727L4.83759 10.6502L1.74759 7.65015C1.55113 7.45398 1.479 7.16559 1.56009 6.90015C1.64877 6.62822 1.8844 6.4304 2.16759 6.39015L6.44259 5.76765L8.32509 1.92015C8.4504 1.66141 8.71259 1.49707 9.00009 1.49707C9.28758 1.49707 9.54977 1.66141 9.67509 1.92015L11.5801 5.76015L15.8551 6.38265C16.1383 6.4229 16.3739 6.62072 16.4626 6.89265C16.5437 7.15809 16.4715 7.4466 16.2751 7.64265L13.1851 10.6427L13.9351 14.8652C13.9898 15.1523 13.8727 15.445 13.6351 15.6152C13.4993 15.7103 13.3357 15.7578 13.1701 15.7502Z" fill="#FFC107"></path></svg>' +
+                '<svg fill="none" height="18" viewBox="0 0 18 18" width="18" xmlns="http://www.w3.org/2000/svg"><path d="M13.1701 15.7502C13.0501 15.7506 12.9318 15.7222 12.8251 15.6677L9.00009 13.6652L5.17509 15.6677C4.92169 15.8009 4.61453 15.7783 4.38341 15.6093C4.15228 15.4402 4.03751 15.1545 4.08759 14.8727L4.83759 10.6502L1.74759 7.65015C1.55113 7.45398 1.479 7.16559 1.56009 6.90015C1.64877 6.62822 1.8844 6.4304 2.16759 6.39015L6.44259 5.76765L8.32509 1.92015C8.4504 1.66141 8.71259 1.49707 9.00009 1.49707C9.28758 1.49707 9.54977 1.66141 9.67509 1.92015L11.5801 5.76015L15.8551 6.38265C16.1383 6.4229 16.3739 6.62072 16.4626 6.89265C16.5437 7.15809 16.4715 7.4466 16.2751 7.64265L13.1851 10.6427L13.9351 14.8652C13.9898 15.1523 13.8727 15.445 13.6351 15.6152C13.4993 15.7103 13.3357 15.7578 13.1701 15.7502Z" fill="#FFC107"></path></svg>' +
+                '<svg fill="none" height="18" viewBox="0 0 18 18" width="18" xmlns="http://www.w3.org/2000/svg"><path d="M13.1701 15.7502C13.0501 15.7506 12.9318 15.7222 12.8251 15.6677L9.00009 13.6652L5.17509 15.6677C4.92169 15.8009 4.61453 15.7783 4.38341 15.6093C4.15228 15.4402 4.03751 15.1545 4.08759 14.8727L4.83759 10.6502L1.74759 7.65015C1.55113 7.45398 1.479 7.16559 1.56009 6.90015C1.64877 6.62822 1.8844 6.4304 2.16759 6.39015L6.44259 5.76765L8.32509 1.92015C8.4504 1.66141 8.71259 1.49707 9.00009 1.49707C9.28758 1.49707 9.54977 1.66141 9.67509 1.92015L11.5801 5.76015L15.8551 6.38265C16.1383 6.4229 16.3739 6.62072 16.4626 6.89265C16.5437 7.15809 16.4715 7.4466 16.2751 7.64265L13.1851 10.6427L13.9351 14.8652C13.9898 15.1523 13.8727 15.445 13.6351 15.6152C13.4993 15.7103 13.3357 15.7578 13.1701 15.7502Z" fill="#FFC107"></path></svg>' +
+                '<svg fill="none" height="18" viewBox="0 0 18 18" width="18" xmlns="http://www.w3.org/2000/svg"><g opacity="0.48"><path d="M13.1701 15.7502C13.0501 15.7506 12.9318 15.7222 12.8251 15.6677L9.00009 13.6652L5.17509 15.6677C4.92169 15.8009 4.61453 15.7781 4.38341 15.6093C4.15228 15.4402 4.03751 15.1545 4.08759 14.8727L4.83759 10.6502L1.74759 7.65015C1.55113 7.45398 1.479 7.16559 1.56009 6.90015C1.64877 6.62822 1.8844 6.4304 2.16759 6.39015L6.44259 5.76765L8.32509 1.92015C8.4504 1.66141 8.71259 1.49707 9.00009 1.49707C9.28758 1.49707 9.54977 1.66141 9.67509 1.92015L11.5801 5.76015L15.8551 6.38265C16.1383 6.4229 16.3739 6.62072 16.4626 6.89265C16.5437 7.15809 16.4715 7.4466 16.2751 7.64265L13.1851 10.6427L13.9351 14.8652C13.9898 15.1523 13.8727 15.445 13.6351 15.6152C13.4993 15.7103 13.3357 15.7578 13.1701 15.7502Z" fill="#919EAB"></path></g></svg>' +
               '</div>' +
-              '<span class="text-xs text-gray-500 font-medium ml-1">(118)</span>' +
+              '<span class="text-gray-secondary text-sm"> (118)</span>' +
             '</div>' +
           '</div>' +
-          '<div class="mt-3 flex items-center justify-between gap-2">' +
+          '<div class="mt-3 flex items-end justify-between">' +
             '<div class="flex items-center gap-2">' +
-              '<span class="text-gray-900 text-base font-bold">' + price + '</span>' +
-              (mrp ? ('<span class="text-gray-400 text-sm line-through">' + mrp + '</span>') : '') +
+              '<span class="text-gray-primary text-base font-medium">' + price + '</span>' +
+              (mrp ? ('<span class="text-gray-tertiary text-base line-through">' + mrp + '</span>') : '') +
             '</div>' +
-            '<button type="button" onclick="window.ProductAPI.addToCart(\'' + id + '\')" class="bg-primary-main hover:bg-primary-main-dark text-white inline-flex h-9 items-center justify-center gap-1.5 rounded-lg px-4 py-2 text-xs font-semibold transition-all shadow-sm active:scale-95 cursor-pointer">' +
-              '<svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>' +
-              '<span>Add</span>' +
+            '<button type="button" onclick="window.ProductAPI.addToCart(\'' + id + '\')" class="group bg-primary-main hover:bg-primary-main-dark text-success-light inline-flex h-10 items-center justify-center gap-2 rounded-lg px-6.5 py-2.5 text-sm font-medium transition-all hover:text-white cursor-pointer shadow-sm active:scale-95">' +
+              '<svg fill="none" height="20" viewBox="0 0 20 20" width="20" xmlns="http://www.w3.org/2000/svg">' +
+                '<path d="M6.6665 13.3333L13.9333 12.7278C16.207 12.5383 16.7174 12.0417 16.9694 9.77406L17.4998 5" stroke="currentColor" stroke-linecap="round" stroke-width="1.5"></path>' +
+                '<path d="M5 5L18.3333 5" stroke="currentColor" stroke-linecap="round" stroke-width="1.5"></path>' +
+                '<circle cx="4.99967" cy="16.6667" r="1.66667" stroke="currentColor" stroke-width="1.5"></circle>' +
+                '<circle cx="14.1667" cy="16.6667" r="1.66667" stroke="currentColor" stroke-width="1.5"></circle>' +
+                '<path d="M6.66667 16.6667L12.5 16.6667" stroke="currentColor" stroke-linecap="round" stroke-width="1.5"></path>' +
+                '<path d="M1.6665 1.66675L2.47151 1.66675C3.25874 1.66675 3.94495 2.18724 4.13589 2.92919L6.61527 12.5638C6.74057 13.0507 6.63334 13.5665 6.32337 13.968L5.52661 15.0001" stroke="currentColor" stroke-linecap="round" stroke-width="1.5"></path>' +
+              '</svg>' +
+              'Add' +
             '</button>' +
           '</div>' +
         '</div>' +
@@ -441,7 +448,7 @@
             chunk.forEach(p => {
               itemsHtml += this.generateHorizontalItemHtml(p);
             });
-            slidesHtml += '<div class="swiper-slide w-full"><ul class="space-y-4 pb-1">' + itemsHtml + '</ul></div>';
+            slidesHtml += '<div class="swiper-slide w-full"><ul class="space-y-6 pb-1">' + itemsHtml + '</ul></div>';
           }
 
           container.innerHTML = slidesHtml;
