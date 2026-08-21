@@ -1,16 +1,16 @@
 /**
  * ============================================================================
- * WiseTrack E-Commerce - Product Catalog & Product Detail API Manager
+ * WiseTrack E-Commerce - Product Catalog & Detail API Manager
  * File: src/api/product.js
  * Catalog API: https://demo.wisetracktechnologies.com/api/catalog
- * Detail API: https://demo.wisetracktechnologies.com/api/catalog/{id}
+ * Detail API:  https://demo.wisetracktechnologies.com/api/catalog/{id}
  * ============================================================================
  */
 
 (function (window, document) {
   'use strict';
 
-  // API Configuration
+  // API Endpoints & Storage Keys
   const API_CONFIG = {
     CATALOG_URL: 'https://demo.wisetracktechnologies.com/api/catalog',
     DETAIL_URL: 'https://demo.wisetracktechnologies.com/api/catalog/',
@@ -20,7 +20,7 @@
   };
 
   /**
-   * Product API Controller
+   * Product API Service & UI Controller
    */
   const ProductAPI = {
     catalogUrl: API_CONFIG.CATALOG_URL,
@@ -34,26 +34,27 @@
      * Initialize Product API
      */
     async init() {
-      // 1. Load cached products if available for instant display
+      // 1. Read cached catalog for instant page load
       this.loadFromCache();
 
-      // 2. Render whatever is available immediately
+      // 2. Render all catalog-driven sections immediately
       this.renderAll();
 
-      // 3. If on Product Details page, immediately fetch details via Detail API
-      if (window.location.pathname.includes('product-detail')) {
+      // 3. If currently on a product detail page, immediately fetch full product details via API
+      if (this.isProductDetailPage()) {
         const urlParams = new URLSearchParams(window.location.search);
-        const id = urlParams.get('id');
+        let id = urlParams.get('id');
+
         if (id) {
           await this.fetchProductDetail(id);
         }
       }
 
-      // 4. Fetch full catalog from live API
+      // 4. Fetch live catalog from API in background
       await this.fetchCatalog();
 
-      // 5. If on detail page and no id was passed or still need refresh
-      if (window.location.pathname.includes('product-detail')) {
+      // 5. If on product detail page and no id was specified in URL, load the first catalog product
+      if (this.isProductDetailPage()) {
         const urlParams = new URLSearchParams(window.location.search);
         let id = urlParams.get('id');
         if (!id && this.products.length > 0) {
@@ -64,9 +65,13 @@
         }
       }
 
-      // 6. Listen for custom events
+      // 6. Listen for events
       window.addEventListener('categories-updated', () => this.renderAll());
-      window.addEventListener('popstate', () => this.renderAll());
+      window.addEventListener('popstate', () => this.init());
+    },
+
+    isProductDetailPage() {
+      return window.location.pathname.includes('product-detail') || window.location.pathname.includes('product-details');
     },
 
     /**
@@ -103,7 +108,7 @@
           this.products = data;
           this.isLoaded = true;
 
-          // Save subset to localStorage cache to prevent quota overflow
+          // Save subset to localStorage cache to avoid browser quota overflow
           try {
             const cacheSubset = data.slice(0, 300);
             localStorage.setItem(API_CONFIG.CACHE_KEY, JSON.stringify(cacheSubset));
@@ -135,7 +140,7 @@
     },
 
     /**
-     * Fetch Single Product Details from Detail API: https://demo.wisetracktechnologies.com/api/catalog/{id}
+     * Fetch Single Product Details by ID from Detail API: https://demo.wisetracktechnologies.com/api/catalog/{id}
      */
     async fetchProductDetail(id) {
       if (!id) return null;
@@ -152,12 +157,12 @@
           return product;
         }
       } catch (error) {
-        console.warn('[ProductAPI] Failed to fetch product detail by id, falling back to local list:', error);
-        const fallbackProduct = this.getProductById(id);
-        if (fallbackProduct) {
-          this.currentProduct = fallbackProduct;
-          this.renderProductDetailsPage(fallbackProduct);
-          return fallbackProduct;
+        console.warn('[ProductAPI] Failed to fetch product detail from API, using catalog data:', error);
+        const fallback = this.getProductById(id);
+        if (fallback) {
+          this.currentProduct = fallback;
+          this.renderProductDetailsPage(fallback);
+          return fallback;
         }
       }
 
@@ -165,7 +170,7 @@
     },
 
     /**
-     * Filter & sort products
+     * Get products filtered by category, search query, price, sorting, limit, offset
      */
     getProducts(options) {
       options = options || {};
@@ -250,7 +255,7 @@
       const category = product.category || 'General';
       const price = this.formatPrice(product.price || 0);
       const mrp = product.mrp && product.mrp > product.price ? this.formatPrice(product.mrp) : '';
-      const img = this.getImageUrl(product);
+      const img = this.getImageUrl(product, 0);
       const unit = product.unit ? ('<span class="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded font-normal">' + product.unit + '</span>') : '';
       const taxNote = product.taxNote ? ('<span class="text-[11px] text-gray-400 font-normal">' + product.taxNote + '</span>') : '';
       const categoryClass = 'cat-' + category.toLowerCase().replace(/[^a-z0-9]/g, '-');
@@ -262,7 +267,7 @@
         '<div class="flex flex-col gap-3.5 rounded-xl border border-gray-300 bg-white p-4 transition-all duration-300 hover:shadow-lg hover:border-primary-main group h-full justify-between">' +
           '<div>' +
             '<div class="relative overflow-hidden rounded-lg bg-gray-50 flex items-center justify-center h-48">' +
-              '<a href="product-details-6.html?id=' + id + '" class="relative block w-full h-full flex items-center justify-center p-2">' +
+              '<a href="product-details-6.html?id=' + encodeURIComponent(id) + '" class="relative block w-full h-full flex items-center justify-center p-2">' +
                 '<img src="' + img + '" alt="' + name + '" loading="lazy" class="max-h-40 max-w-full object-contain transition-transform duration-300 group-hover:scale-105" onerror="this.onerror=null;this.src=\'src/images/home-1/best-selling-tabs/product-1.webp\';" />' +
               '</a>' +
               '<div class="absolute top-2 left-0 inline-block z-10">' +
@@ -278,7 +283,7 @@
               unit +
             '</div>' +
             '<h3 class="text-gray-primary hover:text-primary-main line-clamp-2 text-base leading-6 font-medium mt-1 min-h-[3rem]">' +
-              '<a href="product-details-6.html?id=' + id + '">' + name + '</a>' +
+              '<a href="product-details-6.html?id=' + encodeURIComponent(id) + '">' + name + '</a>' +
             '</h3>' +
             '<div class="flex items-center gap-1 mt-1">' +
               '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 18 18" fill="none"><path d="M13.1701 15.7502C13.0501 15.7506 12.9318 15.7223 12.8251 15.6677L9.00009 13.6652L5.17509 15.6677C4.92169 15.8009 4.61453 15.7783 4.38341 15.6093C4.15228 15.4403 4.03751 15.1545 4.08759 14.8727L4.83759 10.6502L1.74759 7.65015C1.55113 7.4541 1.479 7.16559 1.56009 6.90015C1.64877 6.62822 1.8844 6.4304 2.16759 6.39015L6.44259 5.76765L8.32509 1.92015C8.4504 1.66141 8.71259 1.49707 9.00009 1.49707C9.28758 1.49707 9.54977 1.66141 9.67509 1.92015L11.5801 5.76015L15.8551 6.38265C16.1383 6.4229 16.3739 6.62072 16.4626 6.89265C16.5437 7.15809 16.4715 7.4466 16.2751 7.64265L13.1851 10.6427L13.9351 14.8652C13.9898 15.1523 13.8727 15.445 13.6351 15.6152C13.4993 15.7103 13.3357 15.7578 13.1701 15.7502Z" fill="#FFC107"/></svg>' +
@@ -451,14 +456,14 @@
           const desc = p.description ? p.description.slice(0, 140) + '...' : 'Pure, premium quality product from WiseTrack catalog.';
           const price = this.formatPrice(p.price || 0);
           const mrp = p.mrp && p.mrp > p.price ? this.formatPrice(p.mrp) : '';
-          const img = this.getImageUrl(p);
+          const img = this.getImageUrl(p, 0);
           const unit = p.unit ? ('<span class="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">' + p.unit + '</span>') : '';
           const discount = p.mrp && p.mrp > p.price ? Math.round(((p.mrp - p.price) / p.mrp) * 100) : 15;
 
           html += '<article class="flex flex-col sm:flex-row gap-5 rounded-xl border border-gray-200 bg-white p-4 transition-all duration-300 hover:shadow-lg hover:border-primary-main group items-center justify-between">' +
             '<div class="flex flex-col sm:flex-row gap-4 items-center flex-1 min-w-0 w-full">' +
               '<div class="relative overflow-hidden rounded-xl bg-gray-50 flex items-center justify-center size-36 shrink-0 p-2">' +
-                '<a href="product-details-6.html?id=' + id + '" class="block size-full flex items-center justify-center">' +
+                '<a href="product-details-6.html?id=' + encodeURIComponent(id) + '" class="block size-full flex items-center justify-center">' +
                   '<img src="' + img + '" alt="' + name + '" loading="lazy" class="max-h-28 max-w-full object-contain transition-transform duration-300 group-hover:scale-105" onerror="this.onerror=null;this.src=\'src/images/home-1/best-selling-tabs/product-1.webp\';" />' +
                 '</a>' +
                 '<span class="absolute top-1.5 left-1.5 text-[10px] font-bold bg-red-500 text-white px-1.5 py-0.5 rounded">' + discount + '% OFF</span>' +
@@ -469,7 +474,7 @@
                   unit +
                 '</div>' +
                 '<h3 class="text-base sm:text-lg font-semibold text-gray-900 hover:text-primary-main line-clamp-2 leading-snug">' +
-                  '<a href="product-details-6.html?id=' + id + '">' + name + '</a>' +
+                  '<a href="product-details-6.html?id=' + encodeURIComponent(id) + '">' + name + '</a>' +
                 '</h3>' +
                 '<p class="text-xs text-gray-500 line-clamp-2">' + desc + '</p>' +
                 '<div class="flex items-center gap-1 text-amber-400 text-xs">' +
@@ -529,15 +534,15 @@
     },
 
     /**
-     * 6. Render Full Product Detail Page (Preserves Exact HTML Template Layout)
+     * 6. Render Full Product Detail Page (Preserves Exact HTML Template Layout & Dynamic Data)
      */
     renderProductDetailsPage(product) {
       if (!product) return;
 
-      // 1. Page Title
+      // 1. Update Document Title
       document.title = product.name + ' - WiseTrack E-Commerce';
 
-      // 2. Breadcrumbs
+      // 2. Update Breadcrumbs (Home > Category > Product Name)
       const breadcrumbNav = document.querySelector('nav .custom-container ul');
       if (breadcrumbNav) {
         const lis = breadcrumbNav.querySelectorAll('li');
@@ -551,30 +556,45 @@
         }
       }
 
-      // 3. Left Images Column / Main Gallery
+      // 3. Render Images Gallery
+      // Left Column Gallery in product-details-6.html
       const leftCol = document.querySelector('main section .w-full.xl\:w-1\/2 .space-y-6');
       if (leftCol && Array.isArray(product.imageUrls) && product.imageUrls.length > 0) {
         let imgsHtml = '';
         product.imageUrls.forEach((imgUrl, i) => {
-          imgsHtml += '<img alt="' + (product.name + ' image ' + (i + 1)) + '" class="w-full rounded-2xl object-contain bg-gray-50 max-h-[550px] p-4 shadow-sm" src="' + imgUrl + '" onerror="this.onerror=null;this.src=\'src/images/home-1/best-selling-tabs/product-1.webp\';" />';
+          imgsHtml += '<div class="bg-gray-50 rounded-2xl flex items-center justify-center p-4 border border-gray-100 shadow-sm overflow-hidden">' +
+            '<img alt="' + (product.name + ' image ' + (i + 1)) + '" class="w-full max-h-[550px] object-contain rounded-xl transition-transform duration-300 hover:scale-105" src="' + imgUrl + '" onerror="this.onerror=null;this.src=\'src/images/home-1/best-selling-tabs/product-1.webp\';" />' +
+          '</div>';
         });
         leftCol.innerHTML = imgsHtml;
       }
 
-      // 4. Product Title
+      // Swiper Main Slider in other detail page variants (product-details-8, etc.)
+      const mainSliderWrapper = document.querySelector('.details-8-main-slider .swiper-wrapper, .hand-picked-main .swiper-wrapper');
+      if (mainSliderWrapper && Array.isArray(product.imageUrls) && product.imageUrls.length > 0) {
+        let slides = '';
+        product.imageUrls.forEach(img => {
+          slides += '<div class="swiper-slide flex items-center justify-center bg-gray-50 p-4 rounded-2xl h-[450px]">' +
+            '<img src="' + img + '" class="max-h-[400px] max-w-full object-contain" alt="' + product.name + '" />' +
+          '</div>';
+        });
+        mainSliderWrapper.innerHTML = slides;
+      }
+
+      // 4. Product Titles
       document.querySelectorAll('h3.text-2xl, h1, h2.product-title').forEach(el => {
-        if (el.closest('main') || el.classList.contains('product-title') || el.textContent.includes('Summer Petal')) {
+        if (el.closest('main') || el.classList.contains('product-title') || el.textContent.includes('Summer Petal') || el.textContent.includes('SmartLife')) {
           el.textContent = product.name;
         }
       });
 
-      // 5. Price & MRP
+      // 5. Price & MRP Discounts
       const priceText = this.formatPrice(product.price || 0);
       const mrpText = product.mrp && product.mrp > product.price ? this.formatPrice(product.mrp) : '';
       const discount = product.mrp && product.mrp > product.price ? Math.round(((product.mrp - product.price) / product.mrp) * 100) : 15;
 
       document.querySelectorAll('h4.text-2xl').forEach(el => {
-        if (el.textContent.includes('$') || el.textContent.includes('₹')) {
+        if (el.textContent.includes('$') || el.textContent.includes('₹') || el.closest('.divide-dashed')) {
           el.textContent = priceText;
         }
       });
@@ -589,24 +609,24 @@
       });
 
       document.querySelectorAll('span.uppercase').forEach(el => {
-        if (el.textContent.includes('Off') || el.textContent.includes('off')) {
+        if (el.textContent.includes('Off') || el.textContent.includes('off') || el.textContent.includes('Sales')) {
           el.textContent = discount + '% Off';
         }
       });
 
-      // 6. Description Text
+      // 6. Descriptions (Short Summary & Tab Paragraphs)
       if (product.description) {
         document.querySelectorAll('p.text-gray-secondary.text-base').forEach(el => {
-          if (el.textContent.includes('Stay connected') || el.closest('.divide-dashed')) {
+          if (el.textContent.includes('Stay connected') || el.textContent.includes('To begin, carefully unpack') || el.closest('.divide-dashed')) {
             el.textContent = product.description;
           }
         });
       }
 
-      // 7. Unit / Tax Note / Stock Availability
+      // 7. Unit, Tax Note, & Stock Availability Badge
       const isAvailable = product.availability === 'in_stock' || product.availability === 'available' || !product.availability;
       document.querySelectorAll('p.text-gray-primary').forEach(el => {
-        if (el.textContent.includes('Color:') || el.textContent.includes('Size:')) {
+        if (el.textContent.includes('Color:') || el.textContent.includes('Size:') || el.textContent.includes('Availability:')) {
           const span = el.querySelector('span');
           if (span) {
             span.textContent = isAvailable ? 'In Stock (' + (product.unit || 'pcs') + ')' : 'Out Of Stock';
@@ -615,8 +635,8 @@
         }
       });
 
-      // 8. Category & Metadata List in Right Column
-      document.querySelectorAll('ul.space-y-4 li').forEach(li => {
+      // 8. Product Metadata List (Category, SKU, Tag, Tax Note)
+      document.querySelectorAll('ul.space-y-4 li, ul.space-y-6 li').forEach(li => {
         const titleSpan = li.querySelector('span.text-gray-primary');
         const valSpan = li.querySelector('span.text-gray-secondary');
         if (titleSpan && valSpan) {
@@ -631,22 +651,45 @@
         }
       });
 
-      // 9. Sticky Cart Bar (Bottom)
+      // 9. Specifications Tab List Table
+      const specsList = document.querySelector('div[x-show*="specification"] ul.divide-y');
+      if (specsList) {
+        specsList.innerHTML = 
+          '<li class="flex flex-col gap-2 py-3 first:pt-0 last:pb-0 sm:flex-row sm:gap-6"><span class="shrink-0 text-base font-medium text-gray-800 sm:w-45">Product Name</span><span class="text-gray-secondary text-base leading-6 font-normal">' + product.name + '</span></li>' +
+          '<li class="flex flex-col gap-2 py-3 first:pt-0 last:pb-0 sm:flex-row sm:gap-6"><span class="shrink-0 text-base font-medium text-gray-800 sm:w-45">Category</span><span class="text-gray-secondary text-base leading-6 font-normal">' + (product.category || 'General') + '</span></li>' +
+          '<li class="flex flex-col gap-2 py-3 first:pt-0 last:pb-0 sm:flex-row sm:gap-6"><span class="shrink-0 text-base font-medium text-gray-800 sm:w-45">Unit</span><span class="text-gray-secondary text-base leading-6 font-normal">' + (product.unit || 'pcs') + '</span></li>' +
+          '<li class="flex flex-col gap-2 py-3 first:pt-0 last:pb-0 sm:flex-row sm:gap-6"><span class="shrink-0 text-base font-medium text-gray-800 sm:w-45">Price</span><span class="text-gray-secondary text-base leading-6 font-normal">' + priceText + (product.taxNote ? (' (' + product.taxNote + ')') : '') + '</span></li>' +
+          '<li class="flex flex-col gap-2 py-3 first:pt-0 last:pb-0 sm:flex-row sm:gap-6"><span class="shrink-0 text-base font-medium text-gray-800 sm:w-45">Stock Status</span><span class="text-gray-secondary text-base leading-6 font-normal ' + (isAvailable ? 'text-green-600 font-semibold' : 'text-red-500') + '">' + (isAvailable ? 'In Stock' : 'Out of Stock') + '</span></li>' +
+          '<li class="flex flex-col gap-2 py-3 first:pt-0 last:pb-0 sm:flex-row sm:gap-6"><span class="shrink-0 text-base font-medium text-gray-800 sm:w-45">Digital Item</span><span class="text-gray-secondary text-base leading-6 font-normal">' + (product.isDigital ? 'Yes (Digital Download)' : 'No (Physical Item)') + '</span></li>' +
+          '<li class="flex flex-col gap-2 py-3 first:pt-0 last:pb-0 sm:flex-row sm:gap-6"><span class="shrink-0 text-base font-medium text-gray-800 sm:w-45">Product ID</span><span class="text-gray-secondary text-base leading-6 font-mono text-xs">' + product.id + '</span></li>';
+      }
+
+      // 10. Large Middle Image inside Description Tab
+      const descLargeImg = document.querySelector('div[x-show*="description"] img');
+      if (descLargeImg && product.imageUrls && product.imageUrls.length > 0) {
+        descLargeImg.src = product.imageUrls[0];
+        descLargeImg.className = 'w-full max-h-[400px] object-contain rounded-2xl bg-gray-50 p-4 shadow-sm';
+      }
+
+      // 11. Sticky Cart Bar (Bottom Floating)
       const stickyBar = document.querySelector('[x-data*="showFixedCart"]');
       if (stickyBar) {
         const stickyImg = stickyBar.querySelector('img');
-        if (stickyImg) stickyImg.src = this.getImageUrl(product);
+        if (stickyImg) stickyImg.src = this.getImageUrl(product, 0);
         const stickyTitle = stickyBar.querySelector('h3, h4, a.text-gray-primary');
         if (stickyTitle) stickyTitle.textContent = product.name;
+        const stickyPrice = stickyBar.querySelector('.text-primary-main.text-base');
+        if (stickyPrice) stickyPrice.textContent = priceText;
         const stickyBtn = stickyBar.querySelector('button');
         if (stickyBtn) {
           stickyBtn.onclick = () => window.ProductAPI.addToCart(product.id);
         }
       }
 
-      // 10. Bind main "Add to Cart" button on page
+      // 12. Main "Add to Cart" & "Buy Now" Buttons
       document.querySelectorAll('button').forEach(btn => {
-        if (btn.textContent.trim().toLowerCase() === 'add to cart' || btn.textContent.trim().toLowerCase() === 'buy now') {
+        const txt = btn.textContent.trim().toLowerCase();
+        if (txt === 'add to cart' || txt === 'buy now') {
           btn.onclick = () => {
             const qtyEl = document.querySelector('[data-quantity-value]');
             const qty = qtyEl ? (parseInt(qtyEl.textContent) || 1) : 1;
@@ -654,6 +697,9 @@
           };
         }
       });
+
+      // 13. Re-render Related Products Slider for this product's category
+      this.renderRelatedSliders();
     },
 
     /**
@@ -690,9 +736,9 @@
 
           let html = '<span class="text-gray-primary text-xs font-semibold uppercase tracking-wider block mb-2">Matching Products</span><div class="space-y-2">';
           matches.forEach(p => {
-            const pImg = this.getImageUrl(p);
+            const pImg = this.getImageUrl(p, 0);
             const pPrice = this.formatPrice(p.price || 0);
-            html += '<a href="product-details-6.html?id=' + p.id + '" class="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors">' +
+            html += '<a href="product-details-6.html?id=' + encodeURIComponent(p.id) + '" class="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors">' +
               '<img src="' + pImg + '" class="size-10 object-contain rounded bg-white border border-gray-100" />' +
               '<div class="flex-1 min-w-0">' +
                 '<h4 class="text-sm font-medium text-gray-800 truncate">' + p.name + '</h4>' +
@@ -728,7 +774,7 @@
           id: product.id,
           name: product.name,
           price: product.price,
-          image: this.getImageUrl(product),
+          image: this.getImageUrl(product, 0),
           unit: product.unit,
           qty: qty
         });
@@ -759,6 +805,12 @@
 
       localStorage.setItem('wisetrack_wishlist', JSON.stringify(wishlist));
       window.dispatchEvent(new CustomEvent('wishlist:updated', { detail: wishlist }));
+    },
+
+    openQuickView(productId) {
+      const product = this.getProductById(productId);
+      if (!product) return;
+      window.dispatchEvent(new CustomEvent('open-quick-view', { detail: product }));
     },
 
     showToast(message) {
