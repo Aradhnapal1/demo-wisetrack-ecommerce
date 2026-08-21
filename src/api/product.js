@@ -671,13 +671,9 @@
      * Gallery Image Selector: Updates main view image and active thumbnail styling
      */
     selectGalleryImage(imgUrl, index) {
-      const mainImg = document.getElementById('product-main-view-img');
+      const mainImg = document.getElementById('product-main-view-img') || document.getElementById('product-main-image');
       if (mainImg) {
-        mainImg.style.opacity = '0.3';
         mainImg.src = imgUrl;
-        setTimeout(() => {
-          mainImg.style.opacity = '1';
-        }, 80);
       }
       const counterEl = document.getElementById('gallery-current-idx');
       if (counterEl) {
@@ -685,10 +681,12 @@
       }
       document.querySelectorAll('.gallery-thumb-btn').forEach(btn => {
         btn.classList.remove('border-primary-main', 'ring-2', 'ring-primary-main');
-        btn.classList.add('border-gray-200');
+        btn.style.borderColor = '#e2e8f0';
+        btn.style.boxShadow = 'none';
         if (parseInt(btn.getAttribute('data-index')) === index) {
-          btn.classList.remove('border-gray-200');
           btn.classList.add('border-primary-main', 'ring-2', 'ring-primary-main');
+          btn.style.borderColor = '#04535c';
+          btn.style.boxShadow = '0 0 0 2px rgba(4, 83, 92, 0.25)';
         }
       });
     },
@@ -726,17 +724,17 @@
         let thumbsHtml = '';
         if (total > 1) {
           images.forEach((imgUrl, i) => {
-            thumbsHtml += '<button type="button" onclick="window.ProductAPI.selectGalleryImage(\'' + imgUrl + '\', ' + i + ')" class="gallery-thumb-btn size-16 sm:size-20 lg:size-22 shrink-0 bg-white rounded-xl p-1.5 border ' + (i === 0 ? 'border-primary-main ring-2 ring-primary-main' : 'border-gray-200 hover:border-gray-400') + ' transition-all flex items-center justify-center cursor-pointer overflow-hidden shadow-xs" data-index="' + i + '">' +
-              '<img src="' + imgUrl + '" alt="Thumbnail ' + (i + 1) + '" class="max-h-full max-w-full object-contain" onerror="this.onerror=null;this.src=\'src/images/home-1/best-selling-tabs/product-1.webp\';" />' +
+            thumbsHtml += '<button type="button" onclick="window.ProductAPI.selectGalleryImage(\'' + imgUrl + '\', ' + i + ')" class="gallery-thumb-btn shrink-0 bg-white rounded-xl p-1.5 border ' + (i === 0 ? 'border-primary-main ring-2 ring-primary-main' : 'border-gray-200 hover:border-gray-400') + ' transition-all flex items-center justify-center cursor-pointer overflow-hidden shadow-xs" data-index="' + i + '" style="width: 76px; height: 76px; min-width: 76px; min-height: 76px; padding: 6px; background-color: #ffffff; border-radius: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; ' + (i === 0 ? 'border: 2px solid #04535c; box-shadow: 0 0 0 2px rgba(4,83,92,0.25);' : 'border: 1px solid #e2e8f0;') + '">' +
+              '<img src="' + imgUrl + '" alt="Thumbnail ' + (i + 1) + '" style="max-height: 100%; max-width: 100%; object-fit: contain; display: block;" onerror="this.onerror=null;this.src=\'src/images/home-1/best-selling-tabs/product-1.webp\';" />' +
             '</button>';
           });
         }
 
-        const galleryHtml = '<div class="flex flex-col-reverse lg:flex-row gap-4 items-start w-full">' +
-          (total > 1 ? '<div class="flex lg:flex-col gap-2.5 overflow-x-auto lg:overflow-y-auto w-full lg:w-24 shrink-0 max-h-[520px] p-1">' + thumbsHtml + '</div>' : '') +
-          '<div class="flex-1 w-full bg-gray-50 rounded-2xl flex items-center justify-center p-6 border border-gray-100 shadow-sm overflow-hidden min-h-[380px] h-[450px] lg:h-[520px] relative group">' +
-            '<img id="product-main-view-img" src="' + mainImgUrl + '" alt="' + product.name + '" class="max-h-[460px] max-w-full object-contain rounded-xl transition-all duration-300 group-hover:scale-105" onerror="this.onerror=null;this.src=\'src/images/home-1/best-selling-tabs/product-1.webp\';" />' +
-            (total > 1 ? '<div class="absolute bottom-3 right-3 bg-white/90 backdrop-blur-sm text-gray-700 text-xs px-2.5 py-1 rounded-lg shadow-sm font-medium border border-gray-200"><span id="gallery-current-idx">1</span> / <span>' + total + '</span></div>' : '') +
+        const galleryHtml = '<div class="flex flex-col-reverse md:flex-row gap-4 items-start w-full" style="width: 100%; display: flex;">' +
+          (total > 1 ? '<div class="flex md:flex-col gap-2.5 overflow-x-auto md:overflow-y-auto w-full md:w-22 shrink-0 p-1" style="max-height: 520px; overflow-y: auto; display: flex;">' + thumbsHtml + '</div>' : '') +
+          '<div class="flex-1 w-full bg-gray-50 rounded-2xl flex items-center justify-center p-6 border border-gray-100 shadow-sm overflow-hidden relative" style="min-height: 440px; height: 500px; width: 100%; display: flex; align-items: center; justify-content: center; background-color: #f8fafc; border-radius: 16px; border: 1px solid #f1f5f9; position: relative;">' +
+            '<img id="product-main-view-img" src="' + mainImgUrl + '" alt="' + product.name + '" class="rounded-xl transition-all duration-300 hover:scale-105" style="max-height: 440px; max-width: 100%; width: auto; height: auto; object-fit: contain; display: block;" onerror="this.onerror=null;this.src=\'src/images/home-1/best-selling-tabs/product-1.webp\';" />' +
+            (total > 1 ? '<div class="absolute bottom-3 right-3 bg-white/90 backdrop-blur-sm text-gray-700 text-xs px-2.5 py-1 rounded-lg shadow-sm font-medium border border-gray-200" style="position: absolute; bottom: 12px; right: 12px; background: rgba(255,255,255,0.92); padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 600; border: 1px solid #e2e8f0;"><span id="gallery-current-idx">1</span> / <span>' + total + '</span></div>' : '') +
           '</div>' +
         '</div>';
 
