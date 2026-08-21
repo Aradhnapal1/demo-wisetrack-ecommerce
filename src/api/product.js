@@ -304,41 +304,44 @@
     },
 
     /**
-     * Horizontal Mini-Card Generator (For 3-row Column Sliders like Top Rated, Top Items, Trending)
+     * Exact 1:1 Horizontal Mini-Card Generator Matching image.png (For Top Rated & Top Items)
      */
     generateHorizontalItemHtml(product) {
       if (!product) return '';
       const id = product.id;
       const name = product.name || 'Product';
-      const category = product.category || 'General';
       const price = this.formatPrice(product.price || 0);
       const mrp = product.mrp && product.mrp > product.price ? this.formatPrice(product.mrp) : '';
       const img = this.getImageUrl(product, 0);
 
-      return '<li class="flex flex-col gap-4 rounded-xl border border-gray-300 bg-white p-4 sm:flex-row items-center justify-between transition-all duration-300 hover:shadow-md hover:border-primary-main">' +
+      return '<li class="flex flex-col gap-4 rounded-2xl border border-gray-200 bg-white p-4 sm:flex-row items-center transition-all duration-300 hover:shadow-md hover:border-primary-main">' +
         '<a class="flex size-24 sm:size-28 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gray-50 p-2" href="product-details-6.html?id=' + encodeURIComponent(id) + '">' +
           '<img alt="' + name + '" class="max-h-full max-w-full object-contain rounded-xl transition-transform duration-300 hover:scale-110" src="' + img + '" onerror="this.onerror=null;this.src=\'src/images/home-1/best-selling-tabs/product-1.webp\';" />' +
         '</a>' +
-        '<div class="flex flex-1 flex-col justify-between w-full min-w-0">' +
-          '<div class="space-y-1.5">' +
-            '<span class="text-xs font-semibold text-primary-main truncate block">' + category + '</span>' +
+        '<div class="flex flex-1 flex-col justify-between w-full min-w-0 h-full">' +
+          '<div class="space-y-2">' +
             '<h4>' +
-              '<a class="text-gray-primary hover:text-primary-main line-clamp-2 text-sm sm:text-base leading-snug font-medium" href="product-details-6.html?id=' + encodeURIComponent(id) + '">' +
+              '<a class="text-gray-900 hover:text-primary-main line-clamp-2 text-sm sm:text-base font-semibold leading-snug" href="product-details-6.html?id=' + encodeURIComponent(id) + '">' +
                 name +
               '</a>' +
             '</h4>' +
-            '<div class="flex items-center gap-1 text-xs text-amber-400">' +
-              '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 18 18" fill="none"><path d="M13.1701 15.7502C13.0501 15.7506 12.9318 15.7223 12.8251 15.6677L9.00009 13.6652L5.17509 15.6677C4.92169 15.8009 4.61453 15.7783 4.38341 15.6093C4.15228 15.4403 4.03751 15.1545 4.08759 14.8727L4.83759 10.6502L1.74759 7.65015C1.55113 7.4541 1.479 7.16559 1.56009 6.90015C1.64877 6.62822 1.8844 6.4304 2.16759 6.39015L6.44259 5.76765L8.32509 1.92015C8.4504 1.66141 8.71259 1.49707 9.00009 1.49707C9.28758 1.49707 9.54977 1.66141 9.67509 1.92015L11.5801 5.76015L15.8551 6.38265C16.1383 6.4229 16.3739 6.62072 16.4626 6.89265C16.5437 7.15809 16.4715 7.4466 16.2751 7.64265L13.1851 10.6427L13.9351 14.8652C13.9898 15.1523 13.8727 15.445 13.6351 15.6152C13.4993 15.7103 13.3357 15.7578 13.1701 15.7502Z" fill="#FFC107"/></svg>' +
-              '<span class="text-gray-500 font-medium">4.8</span>' +
-              '<span class="text-gray-400 text-xs">(118)</span>' +
+            '<div class="flex items-center gap-1 text-amber-400">' +
+              '<div class="flex items-center">' +
+                '<svg class="size-4" fill="#FFC107" viewBox="0 0 18 18"><path d="M13.17 15.75L9 13.665 4.83 15.75l.75-4.223L1.75 7.65l4.275-.623L8.325 1.92 9.675 1.92l1.905 3.84 4.275.623-3.09 3.002.75 4.222z"/></svg>' +
+                '<svg class="size-4" fill="#FFC107" viewBox="0 0 18 18"><path d="M13.17 15.75L9 13.665 4.83 15.75l.75-4.223L1.75 7.65l4.275-.623L8.325 1.92 9.675 1.92l1.905 3.84 4.275.623-3.09 3.002.75 4.222z"/></svg>' +
+                '<svg class="size-4" fill="#FFC107" viewBox="0 0 18 18"><path d="M13.17 15.75L9 13.665 4.83 15.75l.75-4.223L1.75 7.65l4.275-.623L8.325 1.92 9.675 1.92l1.905 3.84 4.275.623-3.09 3.002.75 4.222z"/></svg>' +
+                '<svg class="size-4" fill="#FFC107" viewBox="0 0 18 18"><path d="M13.17 15.75L9 13.665 4.83 15.75l.75-4.223L1.75 7.65l4.275-.623L8.325 1.92 9.675 1.92l1.905 3.84 4.275.623-3.09 3.002.75 4.222z"/></svg>' +
+                '<svg class="size-4 opacity-40" fill="#919EAB" viewBox="0 0 18 18"><path d="M13.17 15.75L9 13.665 4.83 15.75l.75-4.223L1.75 7.65l4.275-.623L8.325 1.92 9.675 1.92l1.905 3.84 4.275.623-3.09 3.002.75 4.222z"/></svg>' +
+              '</div>' +
+              '<span class="text-xs text-gray-500 font-medium ml-1">(118)</span>' +
             '</div>' +
           '</div>' +
-          '<div class="mt-3 flex items-center justify-between gap-2 border-t border-gray-100 pt-2">' +
+          '<div class="mt-3 flex items-center justify-between gap-2">' +
             '<div class="flex items-center gap-2">' +
-              '<span class="text-gray-primary text-base font-bold">' + price + '</span>' +
-              (mrp ? ('<span class="text-gray-tertiary text-xs line-through">' + mrp + '</span>') : '') +
+              '<span class="text-gray-900 text-base font-bold">' + price + '</span>' +
+              (mrp ? ('<span class="text-gray-400 text-sm line-through">' + mrp + '</span>') : '') +
             '</div>' +
-            '<button type="button" onclick="window.ProductAPI.addToCart(\'' + id + '\')" class="bg-primary-main hover:bg-primary-main-dark text-white inline-flex h-9 items-center justify-center gap-1.5 rounded-lg px-4 text-xs font-medium transition-all shadow-sm active:scale-95 cursor-pointer">' +
+            '<button type="button" onclick="window.ProductAPI.addToCart(\'' + id + '\')" class="bg-primary-main hover:bg-primary-main-dark text-white inline-flex h-9 items-center justify-center gap-1.5 rounded-lg px-4 py-2 text-xs font-semibold transition-all shadow-sm active:scale-95 cursor-pointer">' +
               '<svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>' +
               '<span>Add</span>' +
             '</button>' +
@@ -355,7 +358,7 @@
 
       this.renderHomeBestSelling();
       this.renderHomeNewArrivals();
-      this.renderHomeColumnSliders(); // Top Rated, Top Items, Trending (3 horizontal items per slide)
+      this.renderHomeColumnSliders(); // Top Rated, Top Items (4 horizontal rows stacked per slide)
       this.renderHomeThemedSliders(); // Coffee, Beauty, etc.
       this.renderListingPages();
       this.renderRelatedSliders();
@@ -411,16 +414,16 @@
     },
 
     /**
-     * 3. Render 3-Column Widget Sliders with Horizontal Rows (Top Rated, Top Items, Trending, Popular Items)
+     * 3. Render Top Rated & Top Items Sliders (4 horizontal rows stacked per slide, exactly matching image.png)
      */
     renderHomeColumnSliders() {
       const columnConfigs = [
-        { selector: '.top-rated-slider .swiper-wrapper', offset: 10, count: 6 },
-        { selector: '.top-items-slider .swiper-wrapper', offset: 18, count: 6 },
-        { selector: '.trending-product-slider .swiper-wrapper', offset: 26, count: 6 },
-        { selector: '.popular-items-slider .swiper-wrapper', offset: 34, count: 6 },
-        { selector: '.top-picks-slider .swiper-wrapper', offset: 42, count: 6 },
-        { selector: '.hot-picks-slider .swiper-wrapper', offset: 50, count: 6 }
+        { selector: '.top-rated-slider .swiper-wrapper', offset: 10, count: 8 },
+        { selector: '.top-items-slider .swiper-wrapper', offset: 18, count: 8 },
+        { selector: '.trending-product-slider .swiper-wrapper', offset: 26, count: 8 },
+        { selector: '.popular-items-slider .swiper-wrapper', offset: 34, count: 8 },
+        { selector: '.top-picks-slider .swiper-wrapper', offset: 42, count: 8 },
+        { selector: '.hot-picks-slider .swiper-wrapper', offset: 50, count: 8 }
       ];
 
       columnConfigs.forEach(cfg => {
@@ -429,16 +432,16 @@
           const prods = this.getProducts({ offset: cfg.offset, limit: cfg.count });
           if (prods.length === 0) return;
 
-          // Group products into chunks of 3 per slide
+          // Group products into chunks of 4 per slide exactly as shown in image.png
           let slidesHtml = '';
-          const chunkSize = 3;
+          const chunkSize = 4;
           for (let i = 0; i < prods.length; i += chunkSize) {
             const chunk = prods.slice(i, i + chunkSize);
             let itemsHtml = '';
             chunk.forEach(p => {
               itemsHtml += this.generateHorizontalItemHtml(p);
             });
-            slidesHtml += '<div class="swiper-slide"><ul class="space-y-4 sm:space-y-6 pb-1">' + itemsHtml + '</ul></div>';
+            slidesHtml += '<div class="swiper-slide w-full"><ul class="space-y-4 pb-1">' + itemsHtml + '</ul></div>';
           }
 
           container.innerHTML = slidesHtml;
