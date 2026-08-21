@@ -14,6 +14,7 @@
   const API_CONFIG = {
     CATALOG_URL: 'https://demo.wisetracktechnologies.com/api/catalog',
     DETAIL_URL: 'https://demo.wisetracktechnologies.com/api/catalog/',
+    DEFAULT_PRODUCT_ID: '16a8357b-4fa1-40ff-a70c-43094daee1d4',
     CACHE_KEY: 'wisetrack_catalog_cache',
     CACHE_TIMESTAMP_KEY: 'wisetrack_catalog_cache_time',
     CACHE_EXPIRY_MS: 30 * 60 * 1000 // 30 minutes
@@ -43,35 +44,32 @@
       // 3. If currently on a product detail page, immediately fetch full product details via API
       if (this.isProductDetailPage()) {
         const urlParams = new URLSearchParams(window.location.search);
-        let id = urlParams.get('id');
-
-        if (id) {
-          await this.fetchProductDetail(id);
-        }
+        let id = urlParams.get('id') || API_CONFIG.DEFAULT_PRODUCT_ID;
+        await this.fetchProductDetail(id);
       }
 
       // 4. Fetch live catalog from API in background
       await this.fetchCatalog();
 
-      // 5. If on product detail page and no id was specified in URL, load the first catalog product
+      // 5. If on product detail page and still not rendered
       if (this.isProductDetailPage()) {
         const urlParams = new URLSearchParams(window.location.search);
-        let id = urlParams.get('id');
-        if (!id && this.products.length > 0) {
-          id = this.products[0].id;
-        }
-        if (id && (!this.currentProduct || this.currentProduct.id !== id)) {
+        let id = urlParams.get('id') || API_CONFIG.DEFAULT_PRODUCT_ID;
+        if (!this.currentProduct || this.currentProduct.id !== id) {
           await this.fetchProductDetail(id);
         }
       }
 
-      // 6. Listen for events
+      // 6. Listen for custom events
       window.addEventListener('categories-updated', () => this.renderAll());
       window.addEventListener('popstate', () => this.init());
     },
 
     isProductDetailPage() {
-      return window.location.pathname.includes('product-detail') || window.location.pathname.includes('product-details');
+      return window.location.pathname.includes('product-detail') || 
+             window.location.pathname.includes('product-details') ||
+             document.querySelector('main [x-data*="activeTab"]') !== null ||
+             document.querySelector('[data-quantity]') !== null;
     },
 
     /**
@@ -108,21 +106,17 @@
           this.products = data;
           this.isLoaded = true;
 
-          // Save subset to localStorage cache to avoid browser quota overflow
           try {
             const cacheSubset = data.slice(0, 300);
             localStorage.setItem(API_CONFIG.CACHE_KEY, JSON.stringify(cacheSubset));
             localStorage.setItem(API_CONFIG.CACHE_TIMESTAMP_KEY, Date.now().toString());
           } catch (e) {}
 
-          // Render across all index pages, grids, and sliders
           this.renderAll();
 
-          // Dispatch custom events
           window.dispatchEvent(new CustomEvent('catalog:loaded', { detail: data }));
           window.dispatchEvent(new CustomEvent('catalog-loaded', { detail: data }));
 
-          // Update Alpine Store if available
           if (window.Alpine && window.Alpine.store) {
             const prodStore = window.Alpine.store('products');
             if (prodStore) prodStore.items = data;
@@ -143,7 +137,7 @@
      * Fetch Single Product Details by ID from Detail API: https://demo.wisetracktechnologies.com/api/catalog/{id}
      */
     async fetchProductDetail(id) {
-      if (!id) return null;
+      if (!id) id = API_CONFIG.DEFAULT_PRODUCT_ID;
 
       try {
         const response = await fetch(this.detailUrl + encodeURIComponent(id));
@@ -157,7 +151,7 @@
           return product;
         }
       } catch (error) {
-        console.warn('[ProductAPI] Failed to fetch product detail from API, using catalog data:', error);
+        console.warn('[ProductAPI] Failed to fetch product detail from API, using catalog fallback:', error);
         const fallback = this.getProductById(id);
         if (fallback) {
           this.currentProduct = fallback;
@@ -534,7 +528,7 @@
     },
 
     /**
-     * 6. Render Full Product Detail Page (Preserves Exact HTML Template Layout & Dynamic Data)
+     * 6. Render Full Product Detail Page from API Data (100% Dynamic Content)
      */
     renderProductDetailsPage(product) {
       if (!product) return;
@@ -556,29 +550,16 @@
         }
       }
 
-      // 3. Render Images Gallery
-      // Left Column Gallery in product-details-6.html
+      // 3. Render Images Gallery (Left Column)
       const leftCol = document.querySelector('main section .w-full.xl\:w-1\/2 .space-y-6');
       if (leftCol && Array.isArray(product.imageUrls) && product.imageUrls.length > 0) {
         let imgsHtml = '';
         product.imageUrls.forEach((imgUrl, i) => {
           imgsHtml += '<div class="bg-gray-50 rounded-2xl flex items-center justify-center p-4 border border-gray-100 shadow-sm overflow-hidden">' +
-            '<img alt="' + (product.name + ' image ' + (i + 1)) + '" class="w-full max-h-[550px] object-contain rounded-xl transition-transform duration-300 hover:scale-105" src="' + imgUrl + '" onerror="this.onerror=null;this.src=\'src/images/home-1/best-selling-tabs/product-1.webp\';" />' +
+            '<img alt="' + (product.name + ' image ' + (i + 1)) + '" class="w-full max-h-[520px] object-contain rounded-xl transition-transform duration-300 hover:scale-105" src="' + imgUrl + '" onerror="this.onerror=null;this.src=\'src/images/home-1/best-selling-tabs/product-1.webp\';" />' +
           '</div>';
         });
         leftCol.innerHTML = imgsHtml;
-      }
-
-      // Swiper Main Slider in other detail page variants (product-details-8, etc.)
-      const mainSliderWrapper = document.querySelector('.details-8-main-slider .swiper-wrapper, .hand-picked-main .swiper-wrapper');
-      if (mainSliderWrapper && Array.isArray(product.imageUrls) && product.imageUrls.length > 0) {
-        let slides = '';
-        product.imageUrls.forEach(img => {
-          slides += '<div class="swiper-slide flex items-center justify-center bg-gray-50 p-4 rounded-2xl h-[450px]">' +
-            '<img src="' + img + '" class="max-h-[400px] max-w-full object-contain" alt="' + product.name + '" />' +
-          '</div>';
-        });
-        mainSliderWrapper.innerHTML = slides;
       }
 
       // 4. Product Titles
@@ -588,13 +569,13 @@
         }
       });
 
-      // 5. Price & MRP Discounts
+      // 5. Price, MRP, & Discount Badge
       const priceText = this.formatPrice(product.price || 0);
       const mrpText = product.mrp && product.mrp > product.price ? this.formatPrice(product.mrp) : '';
       const discount = product.mrp && product.mrp > product.price ? Math.round(((product.mrp - product.price) / product.mrp) * 100) : 15;
 
       document.querySelectorAll('h4.text-2xl').forEach(el => {
-        if (el.textContent.includes('$') || el.textContent.includes('₹') || el.closest('.divide-dashed')) {
+        if (el.closest('.divide-dashed') || el.textContent.includes('$') || el.textContent.includes('₹')) {
           el.textContent = priceText;
         }
       });
@@ -614,28 +595,54 @@
         }
       });
 
-      // 6. Descriptions (Short Summary & Tab Paragraphs)
-      if (product.description) {
-        document.querySelectorAll('p.text-gray-secondary.text-base').forEach(el => {
-          if (el.textContent.includes('Stay connected') || el.textContent.includes('To begin, carefully unpack') || el.closest('.divide-dashed')) {
-            el.textContent = product.description;
-          }
-        });
+      // 6. Middle Section - Description Summary & Bullet Features
+      const isAvailable = product.availability === 'in_stock' || product.availability === 'available' || !product.availability;
+      
+      const middleSection = document.querySelector('main section .divide-dashed > div:nth-child(2)');
+      if (middleSection) {
+        middleSection.innerHTML = 
+          '<p class="text-gray-secondary mb-4 text-base leading-relaxed sm:mb-6">' + (product.description || 'Premium quality verified item from WiseTrack catalog.') + '</p>' +
+          '<ul class="space-y-3.5 pt-2">' +
+            '<li class="flex items-center gap-3.5"><span class="bg-primary-main/10 text-primary-main p-1 rounded-full"><svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></span><p class="text-gray-700 text-sm font-medium">Category: <span class="text-primary-main font-semibold">' + (product.category || 'General') + '</span></p></li>' +
+            '<li class="flex items-center gap-3.5"><span class="bg-primary-main/10 text-primary-main p-1 rounded-full"><svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></span><p class="text-gray-700 text-sm font-medium">Packaging Unit: <span class="text-gray-900 font-semibold">' + (product.unit || 'Standard Unit') + '</span></p></li>' +
+            '<li class="flex items-center gap-3.5"><span class="bg-primary-main/10 text-primary-main p-1 rounded-full"><svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></span><p class="text-gray-700 text-sm font-medium">Tax Notice: <span class="text-gray-900 font-semibold">' + (product.taxNote || 'Inclusive of all taxes') + '</span></p></li>' +
+            '<li class="flex items-center gap-3.5"><span class="' + (isAvailable ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700') + ' p-1 rounded-full"><svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></span><p class="text-gray-700 text-sm font-medium">Availability: <span class="' + (isAvailable ? 'text-green-600 font-bold' : 'text-red-600 font-bold') + '">' + (isAvailable ? 'In Stock (Ready to Dispatch)' : 'Out Of Stock') + '</span></p></li>' +
+          '</ul>';
       }
 
-      // 7. Unit, Tax Note, & Stock Availability Badge
-      const isAvailable = product.availability === 'in_stock' || product.availability === 'available' || !product.availability;
-      document.querySelectorAll('p.text-gray-primary').forEach(el => {
-        if (el.textContent.includes('Color:') || el.textContent.includes('Size:') || el.textContent.includes('Availability:')) {
-          const span = el.querySelector('span');
-          if (span) {
-            span.textContent = isAvailable ? 'In Stock (' + (product.unit || 'pcs') + ')' : 'Out Of Stock';
-            span.className = isAvailable ? 'text-green-600 ml-2.5 font-semibold' : 'text-error-dark ml-2.5 font-normal';
-          }
-        }
-      });
+      // 7. Middle Section - Color/Size/Quantity Box replacement with Product Selection & Unit
+      const stockSection = document.querySelector('main section .divide-dashed > div:nth-child(3)');
+      if (stockSection) {
+        stockSection.innerHTML = 
+          '<div>' +
+            '<div class="mb-3 flex items-center justify-between">' +
+              '<p class="text-gray-primary font-medium">Pack Unit: <span class="text-primary-main font-semibold ml-2">' + (product.unit || '1 Pack') + '</span></p>' +
+              '<span class="text-xs px-2.5 py-1 rounded-full font-semibold ' + (isAvailable ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200') + '">' + (isAvailable ? '● In Stock' : '● Out of Stock') + '</span>' +
+            '</div>' +
+            '<div class="flex flex-wrap gap-3">' +
+              '<span class="border-2 border-primary-main bg-primary-main/10 text-primary-main font-bold flex h-10 min-w-24 items-center justify-center rounded-lg px-4 text-sm">' + (product.unit || 'Standard') + '</span>' +
+            '</div>' +
+          '</div>' +
+          '<div class="pt-4">' +
+            '<p class="text-gray-primary mb-3 font-medium">Quantity</p>' +
+            '<div class="flex flex-wrap gap-4 items-center">' +
+              '<div class="border border-gray-300 flex h-12 items-center justify-between gap-4 rounded-lg px-4 py-2 sm:w-44 bg-white">' +
+                '<button type="button" class="size-6 flex items-center justify-center text-gray-500 hover:text-gray-900 cursor-pointer font-bold text-lg" onclick="const q=document.getElementById(\'detail-qty\'); if(parseInt(q.textContent)>1) q.textContent=parseInt(q.textContent)-1;">-</button>' +
+                '<span id="detail-qty" class="text-gray-primary text-base font-bold">1</span>' +
+                '<button type="button" class="size-6 flex items-center justify-center text-gray-500 hover:text-gray-900 cursor-pointer font-bold text-lg" onclick="const q=document.getElementById(\'detail-qty\'); q.textContent=parseInt(q.textContent)+1;">+</button>' +
+              '</div>' +
+              '<button type="button" onclick="const q=parseInt(document.getElementById(\'detail-qty\').textContent)||1; window.ProductAPI.addToCart(\'' + product.id + '\', q);" class="bg-primary-main hover:bg-primary-main-dark text-white flex-1 h-12 flex items-center justify-center gap-2 rounded-lg font-semibold text-base transition-all duration-300 shadow-md active:scale-95 cursor-pointer">' +
+                '<svg class="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>' +
+                '<span>Add to Cart</span>' +
+              '</button>' +
+              '<button type="button" onclick="window.ProductAPI.toggleWishlist(\'' + product.id + '\')" class="size-12 rounded-lg border border-gray-300 flex items-center justify-center text-gray-600 hover:text-red-500 hover:border-red-500 transition-colors cursor-pointer bg-white">' +
+                '<svg class="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>' +
+              '</button>' +
+            '</div>' +
+          '</div>';
+      }
 
-      // 8. Product Metadata List (Category, SKU, Tag, Tax Note)
+      // 8. Product Metadata List (Category, SKU, Tags)
       document.querySelectorAll('ul.space-y-4 li, ul.space-y-6 li').forEach(li => {
         const titleSpan = li.querySelector('span.text-gray-primary');
         const valSpan = li.querySelector('span.text-gray-secondary');
@@ -651,7 +658,7 @@
         }
       });
 
-      // 9. Specifications Tab List Table
+      // 9. Specifications Tab List
       const specsList = document.querySelector('div[x-show*="specification"] ul.divide-y');
       if (specsList) {
         specsList.innerHTML = 
@@ -664,11 +671,18 @@
           '<li class="flex flex-col gap-2 py-3 first:pt-0 last:pb-0 sm:flex-row sm:gap-6"><span class="shrink-0 text-base font-medium text-gray-800 sm:w-45">Product ID</span><span class="text-gray-secondary text-base leading-6 font-mono text-xs">' + product.id + '</span></li>';
       }
 
-      // 10. Large Middle Image inside Description Tab
-      const descLargeImg = document.querySelector('div[x-show*="description"] img');
-      if (descLargeImg && product.imageUrls && product.imageUrls.length > 0) {
-        descLargeImg.src = product.imageUrls[0];
-        descLargeImg.className = 'w-full max-h-[400px] object-contain rounded-2xl bg-gray-50 p-4 shadow-sm';
+      // 10. Description Tab Text & Large Image
+      const descTabContent = document.querySelector('div[x-show*="description"]');
+      if (descTabContent) {
+        const descP = descTabContent.querySelector('p');
+        if (descP && product.description) {
+          descP.textContent = product.description;
+        }
+        const descLargeImg = descTabContent.querySelector('img');
+        if (descLargeImg && product.imageUrls && product.imageUrls.length > 0) {
+          descLargeImg.src = product.imageUrls[0];
+          descLargeImg.className = 'w-full max-h-[400px] object-contain rounded-2xl bg-gray-50 p-4 shadow-sm';
+        }
       }
 
       // 11. Sticky Cart Bar (Bottom Floating)
@@ -676,29 +690,17 @@
       if (stickyBar) {
         const stickyImg = stickyBar.querySelector('img');
         if (stickyImg) stickyImg.src = this.getImageUrl(product, 0);
-        const stickyTitle = stickyBar.querySelector('h3, h4, a.text-gray-primary');
+        const stickyTitle = stickyBar.querySelector('h3, h4, a');
         if (stickyTitle) stickyTitle.textContent = product.name;
-        const stickyPrice = stickyBar.querySelector('.text-primary-main.text-base');
+        const stickyPrice = stickyBar.querySelector('.text-primary-main.text-base, span.font-bold');
         if (stickyPrice) stickyPrice.textContent = priceText;
         const stickyBtn = stickyBar.querySelector('button');
         if (stickyBtn) {
-          stickyBtn.onclick = () => window.ProductAPI.addToCart(product.id);
+          stickyBtn.onclick = () => window.ProductAPI.addToCart(product.id, 1);
         }
       }
 
-      // 12. Main "Add to Cart" & "Buy Now" Buttons
-      document.querySelectorAll('button').forEach(btn => {
-        const txt = btn.textContent.trim().toLowerCase();
-        if (txt === 'add to cart' || txt === 'buy now') {
-          btn.onclick = () => {
-            const qtyEl = document.querySelector('[data-quantity-value]');
-            const qty = qtyEl ? (parseInt(qtyEl.textContent) || 1) : 1;
-            window.ProductAPI.addToCart(product.id, qty);
-          };
-        }
-      });
-
-      // 13. Re-render Related Products Slider for this product's category
+      // 12. Re-render Related Products Slider for this product's category
       this.renderRelatedSliders();
     },
 
@@ -854,7 +856,7 @@
     }
   });
 
-  // Auto-initialize on DOM ready
+  // Auto-initialize on DOM ready or immediate
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => ProductAPI.init());
   } else {
