@@ -668,7 +668,33 @@
     },
 
     /**
-     * 7. Render Full Product Detail Page from API Data (100% Dynamic Content)
+     * Gallery Image Selector: Updates main view image and active thumbnail styling
+     */
+    selectGalleryImage(imgUrl, index) {
+      const mainImg = document.getElementById('product-main-view-img');
+      if (mainImg) {
+        mainImg.style.opacity = '0.3';
+        mainImg.src = imgUrl;
+        setTimeout(() => {
+          mainImg.style.opacity = '1';
+        }, 80);
+      }
+      const counterEl = document.getElementById('gallery-current-idx');
+      if (counterEl) {
+        counterEl.textContent = (index + 1);
+      }
+      document.querySelectorAll('.gallery-thumb-btn').forEach(btn => {
+        btn.classList.remove('border-primary-main', 'ring-2', 'ring-primary-main');
+        btn.classList.add('border-gray-200');
+        if (parseInt(btn.getAttribute('data-index')) === index) {
+          btn.classList.remove('border-gray-200');
+          btn.classList.add('border-primary-main', 'ring-2', 'ring-primary-main');
+        }
+      });
+    },
+
+    /**
+     * 7. Render Full Product Detail Page from API Data (100% Dynamic Content with Single Main Image + Side Thumbnails)
      */
     renderProductDetailsPage(product) {
       if (!product) return;
@@ -690,16 +716,31 @@
         }
       }
 
-      // 3. Render Images Gallery (Left Column)
-      const galleryContainer = document.getElementById('product-gallery-container') || document.querySelector('main section .w-full.xl\:w-1\/2 .space-y-6');
+      // 3. Render Images Gallery (Left: Side Thumbnails + Right: Big Main Image Box)
+      const galleryContainer = document.getElementById('product-gallery-container') || document.querySelector('main section .w-full.xl\:w-1\/2');
       if (galleryContainer && Array.isArray(product.imageUrls) && product.imageUrls.length > 0) {
-        let imgsHtml = '';
-        product.imageUrls.forEach((imgUrl, i) => {
-          imgsHtml += '<div class="bg-gray-50 rounded-2xl flex items-center justify-center p-4 border border-gray-100 shadow-sm overflow-hidden min-h-[360px]">' +
-            '<img alt="' + (product.name + ' image ' + (i + 1)) + '" class="w-full max-h-[520px] object-contain rounded-xl transition-transform duration-300 hover:scale-105" src="' + imgUrl + '" onerror="this.onerror=null;this.src=\'src/images/home-1/best-selling-tabs/product-1.webp\';" />' +
-          '</div>';
-        });
-        galleryContainer.innerHTML = imgsHtml;
+        const images = product.imageUrls;
+        const total = images.length;
+        const mainImgUrl = images[0];
+
+        let thumbsHtml = '';
+        if (total > 1) {
+          images.forEach((imgUrl, i) => {
+            thumbsHtml += '<button type="button" onclick="window.ProductAPI.selectGalleryImage(\'' + imgUrl + '\', ' + i + ')" class="gallery-thumb-btn size-16 sm:size-20 lg:size-22 shrink-0 bg-white rounded-xl p-1.5 border ' + (i === 0 ? 'border-primary-main ring-2 ring-primary-main' : 'border-gray-200 hover:border-gray-400') + ' transition-all flex items-center justify-center cursor-pointer overflow-hidden shadow-xs" data-index="' + i + '">' +
+              '<img src="' + imgUrl + '" alt="Thumbnail ' + (i + 1) + '" class="max-h-full max-w-full object-contain" onerror="this.onerror=null;this.src=\'src/images/home-1/best-selling-tabs/product-1.webp\';" />' +
+            '</button>';
+          });
+        }
+
+        const galleryHtml = '<div class="flex flex-col-reverse lg:flex-row gap-4 items-start w-full">' +
+          (total > 1 ? '<div class="flex lg:flex-col gap-2.5 overflow-x-auto lg:overflow-y-auto w-full lg:w-24 shrink-0 max-h-[520px] p-1">' + thumbsHtml + '</div>' : '') +
+          '<div class="flex-1 w-full bg-gray-50 rounded-2xl flex items-center justify-center p-6 border border-gray-100 shadow-sm overflow-hidden min-h-[380px] h-[450px] lg:h-[520px] relative group">' +
+            '<img id="product-main-view-img" src="' + mainImgUrl + '" alt="' + product.name + '" class="max-h-[460px] max-w-full object-contain rounded-xl transition-all duration-300 group-hover:scale-105" onerror="this.onerror=null;this.src=\'src/images/home-1/best-selling-tabs/product-1.webp\';" />' +
+            (total > 1 ? '<div class="absolute bottom-3 right-3 bg-white/90 backdrop-blur-sm text-gray-700 text-xs px-2.5 py-1 rounded-lg shadow-sm font-medium border border-gray-200"><span id="gallery-current-idx">1</span> / <span>' + total + '</span></div>' : '') +
+          '</div>' +
+        '</div>';
+
+        galleryContainer.innerHTML = galleryHtml;
       }
 
       // 4. Product Titles
