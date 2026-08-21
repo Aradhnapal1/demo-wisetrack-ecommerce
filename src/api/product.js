@@ -28,6 +28,7 @@
     detailUrl: API_CONFIG.DETAIL_URL,
     products: [],
     currentProduct: null,
+    currentGalleryIndex: 0,
     isLoaded: false,
     isLoading: false,
 
@@ -147,6 +148,7 @@
         const product = await response.json();
         if (product && product.id) {
           this.currentProduct = product;
+          this.currentGalleryIndex = 0;
           this.renderProductDetailsPage(product);
           window.dispatchEvent(new CustomEvent('product:detail-loaded', { detail: product }));
           return product;
@@ -156,6 +158,7 @@
         const fallback = this.getProductById(id);
         if (fallback) {
           this.currentProduct = fallback;
+          this.currentGalleryIndex = 0;
           this.renderProductDetailsPage(fallback);
           return fallback;
         }
@@ -591,7 +594,7 @@
           const price = this.formatPrice(p.price || 0);
           const mrp = p.mrp && p.mrp > p.price ? this.formatPrice(p.mrp) : '';
           const img = this.getImageUrl(p, 0);
-          const unit = p.unit ? ('<span class="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">' + p.unit + '</span>') : '';
+          const unit = p.unit ? ('<span class="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded font-normal">' + p.unit + '</span>') : '';
           const discount = p.mrp && p.mrp > p.price ? Math.round(((p.mrp - p.price) / p.mrp) * 100) : 15;
 
           html += '<article class="flex flex-col sm:flex-row gap-5 rounded-xl border border-gray-200 bg-white p-4 transition-all duration-300 hover:shadow-lg hover:border-primary-main group items-center justify-between">' +
@@ -668,9 +671,10 @@
     },
 
     /**
-     * Gallery Image Selector: Updates main view image and active thumbnail styling
+     * Gallery Image Select: Updates main view image and active thumbnail styling
      */
     selectGalleryImage(imgUrl, index) {
+      this.currentGalleryIndex = index;
       const mainImg = document.getElementById('product-main-view-img') || document.getElementById('product-main-image');
       if (mainImg) {
         mainImg.src = imgUrl;
@@ -687,12 +691,35 @@
           btn.classList.add('border-primary-main', 'ring-2', 'ring-primary-main');
           btn.style.borderColor = '#04535c';
           btn.style.boxShadow = '0 0 0 2px rgba(4, 83, 92, 0.25)';
+          try {
+            btn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+          } catch(e) {}
         }
       });
     },
 
     /**
-     * 7. Render Full Product Detail Page from API Data (100% Dynamic Content with Single Main Image + Side Thumbnails)
+     * Gallery Previous Image
+     */
+    prevGalleryImage() {
+      if (!this.currentProduct || !Array.isArray(this.currentProduct.imageUrls) || this.currentProduct.imageUrls.length <= 1) return;
+      const total = this.currentProduct.imageUrls.length;
+      let nextIdx = (this.currentGalleryIndex - 1 + total) % total;
+      this.selectGalleryImage(this.currentProduct.imageUrls[nextIdx], nextIdx);
+    },
+
+    /**
+     * Gallery Next Image
+     */
+    nextGalleryImage() {
+      if (!this.currentProduct || !Array.isArray(this.currentProduct.imageUrls) || this.currentProduct.imageUrls.length <= 1) return;
+      const total = this.currentProduct.imageUrls.length;
+      let nextIdx = (this.currentGalleryIndex + 1) % total;
+      this.selectGalleryImage(this.currentProduct.imageUrls[nextIdx], nextIdx);
+    },
+
+    /**
+     * 7. Render Full Product Detail Page from API Data (100% Dynamic Content with Single Main Image + Side Thumbnails + Arrow Navigation)
      */
     renderProductDetailsPage(product) {
       if (!product) return;
@@ -714,17 +741,17 @@
         }
       }
 
-      // 3. Render Images Gallery (Left: Side Thumbnails + Right: Big Main Image Box)
+      // 3. Render Images Gallery (Left: Side Thumbnails + Right: Big Main Image Box with Left/Right Arrows)
       const galleryContainer = document.getElementById('product-gallery-container') || document.querySelector('main section .w-full.xl\:w-1\/2');
       if (galleryContainer && Array.isArray(product.imageUrls) && product.imageUrls.length > 0) {
         const images = product.imageUrls;
         const total = images.length;
-        const mainImgUrl = images[0];
+        const mainImgUrl = images[this.currentGalleryIndex] || images[0];
 
         let thumbsHtml = '';
         if (total > 1) {
           images.forEach((imgUrl, i) => {
-            thumbsHtml += '<button type="button" onclick="window.ProductAPI.selectGalleryImage(\'' + imgUrl + '\', ' + i + ')" class="gallery-thumb-btn shrink-0 bg-white rounded-xl p-1.5 border ' + (i === 0 ? 'border-primary-main ring-2 ring-primary-main' : 'border-gray-200 hover:border-gray-400') + ' transition-all flex items-center justify-center cursor-pointer overflow-hidden shadow-xs" data-index="' + i + '" style="width: 76px; height: 76px; min-width: 76px; min-height: 76px; padding: 6px; background-color: #ffffff; border-radius: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; ' + (i === 0 ? 'border: 2px solid #04535c; box-shadow: 0 0 0 2px rgba(4,83,92,0.25);' : 'border: 1px solid #e2e8f0;') + '">' +
+            thumbsHtml += '<button type="button" onclick="window.ProductAPI.selectGalleryImage(\'' + imgUrl + '\', ' + i + ')" class="gallery-thumb-btn shrink-0 bg-white rounded-xl p-1.5 border ' + (i === this.currentGalleryIndex ? 'border-primary-main ring-2 ring-primary-main' : 'border-gray-200 hover:border-gray-400') + ' transition-all flex items-center justify-center cursor-pointer overflow-hidden shadow-xs" data-index="' + i + '" style="width: 76px; height: 76px; min-width: 76px; min-height: 76px; padding: 6px; background-color: #ffffff; border-radius: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; ' + (i === this.currentGalleryIndex ? 'border: 2px solid #04535c; box-shadow: 0 0 0 2px rgba(4,83,92,0.25);' : 'border: 1px solid #e2e8f0;') + '">' +
               '<img src="' + imgUrl + '" alt="Thumbnail ' + (i + 1) + '" style="max-height: 100%; max-width: 100%; object-fit: contain; display: block;" onerror="this.onerror=null;this.src=\'src/images/home-1/best-selling-tabs/product-1.webp\';" />' +
             '</button>';
           });
@@ -733,8 +760,14 @@
         const galleryHtml = '<div class="flex flex-col-reverse md:flex-row gap-4 items-start w-full" style="width: 100%; display: flex;">' +
           (total > 1 ? '<div class="flex md:flex-col gap-2.5 overflow-x-auto md:overflow-y-auto w-full md:w-22 shrink-0 p-1" style="max-height: 520px; overflow-y: auto; display: flex;">' + thumbsHtml + '</div>' : '') +
           '<div class="flex-1 w-full bg-gray-50 rounded-2xl flex items-center justify-center p-6 border border-gray-100 shadow-sm overflow-hidden relative" style="min-height: 440px; height: 500px; width: 100%; display: flex; align-items: center; justify-content: center; background-color: #f8fafc; border-radius: 16px; border: 1px solid #f1f5f9; position: relative;">' +
+            // Left Arrow Button
+            (total > 1 ? '<button type="button" onclick="window.ProductAPI.prevGalleryImage()" aria-label="Previous Image" class="group hover:bg-primary-main text-gray-700 hover:text-white transition-all cursor-pointer z-10" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.95); display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.12); cursor: pointer; z-index: 10; border: 1px solid #e2e8f0;"><svg fill="none" height="20" viewBox="0 0 20 20" width="20" xmlns="http://www.w3.org/2000/svg"><path d="M12.5 5L8.20711 9.29289C7.87377 9.62623 7.70711 9.79289 7.70711 10C7.70711 10.2071 7.87377 10.3738 8.20711 10.7071L12.5 15" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg></button>' : '') +
+            // Main Image
             '<img id="product-main-view-img" src="' + mainImgUrl + '" alt="' + product.name + '" class="rounded-xl transition-all duration-300 hover:scale-105" style="max-height: 440px; max-width: 100%; width: auto; height: auto; object-fit: contain; display: block;" onerror="this.onerror=null;this.src=\'src/images/home-1/best-selling-tabs/product-1.webp\';" />' +
-            (total > 1 ? '<div class="absolute bottom-3 right-3 bg-white/90 backdrop-blur-sm text-gray-700 text-xs px-2.5 py-1 rounded-lg shadow-sm font-medium border border-gray-200" style="position: absolute; bottom: 12px; right: 12px; background: rgba(255,255,255,0.92); padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 600; border: 1px solid #e2e8f0;"><span id="gallery-current-idx">1</span> / <span>' + total + '</span></div>' : '') +
+            // Right Arrow Button
+            (total > 1 ? '<button type="button" onclick="window.ProductAPI.nextGalleryImage()" aria-label="Next Image" class="group hover:bg-primary-main text-gray-700 hover:text-white transition-all cursor-pointer z-10" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.95); display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.12); cursor: pointer; z-index: 10; border: 1px solid #e2e8f0;"><svg fill="none" height="20" viewBox="0 0 20 20" width="20" xmlns="http://www.w3.org/2000/svg"><path d="M7.5 15L11.7929 10.7071C12.1262 10.3738 12.2929 10.2071 12.2929 10C12.2929 9.79289 12.1262 9.62623 11.7929 9.29289L7.5 5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg></button>' : '') +
+            // Counter Badge
+            (total > 1 ? '<div class="absolute bottom-3 right-3 bg-white/90 backdrop-blur-sm text-gray-700 text-xs px-2.5 py-1 rounded-lg shadow-sm font-medium border border-gray-200" style="position: absolute; bottom: 12px; right: 12px; background: rgba(255,255,255,0.92); padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 600; border: 1px solid #e2e8f0;"><span id="gallery-current-idx">' + (this.currentGalleryIndex + 1) + '</span> / <span>' + total + '</span></div>' : '') +
           '</div>' +
         '</div>';
 
