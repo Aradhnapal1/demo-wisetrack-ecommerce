@@ -152,7 +152,7 @@
           return product;
         }
       } catch (error) {
-        console.warn('[ProductAPI] Detail API request fallback:', error);
+        console.warn('[ProductAPI] Detail API fallback:', error);
         const fallback = this.getProductById(id);
         if (fallback) {
           this.currentProduct = fallback;
@@ -240,7 +240,7 @@
     },
 
     /**
-     * Standard Swiper Product Card Generator (Preserves Template Design)
+     * Standard Vertical Product Card Generator (For 4-column Grid Sliders)
      */
     generateProductCardHtml(product, isSlide) {
       if (isSlide === undefined) isSlide = true;
@@ -304,6 +304,50 @@
     },
 
     /**
+     * Horizontal Mini-Card Generator (For 3-row Column Sliders like Top Rated, Top Items, Trending)
+     */
+    generateHorizontalItemHtml(product) {
+      if (!product) return '';
+      const id = product.id;
+      const name = product.name || 'Product';
+      const category = product.category || 'General';
+      const price = this.formatPrice(product.price || 0);
+      const mrp = product.mrp && product.mrp > product.price ? this.formatPrice(product.mrp) : '';
+      const img = this.getImageUrl(product, 0);
+
+      return '<li class="flex flex-col gap-4 rounded-xl border border-gray-300 bg-white p-4 sm:flex-row items-center justify-between transition-all duration-300 hover:shadow-md hover:border-primary-main">' +
+        '<a class="flex size-24 sm:size-28 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gray-50 p-2" href="product-details-6.html?id=' + encodeURIComponent(id) + '">' +
+          '<img alt="' + name + '" class="max-h-full max-w-full object-contain rounded-xl transition-transform duration-300 hover:scale-110" src="' + img + '" onerror="this.onerror=null;this.src=\'src/images/home-1/best-selling-tabs/product-1.webp\';" />' +
+        '</a>' +
+        '<div class="flex flex-1 flex-col justify-between w-full min-w-0">' +
+          '<div class="space-y-1.5">' +
+            '<span class="text-xs font-semibold text-primary-main truncate block">' + category + '</span>' +
+            '<h4>' +
+              '<a class="text-gray-primary hover:text-primary-main line-clamp-2 text-sm sm:text-base leading-snug font-medium" href="product-details-6.html?id=' + encodeURIComponent(id) + '">' +
+                name +
+              '</a>' +
+            '</h4>' +
+            '<div class="flex items-center gap-1 text-xs text-amber-400">' +
+              '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 18 18" fill="none"><path d="M13.1701 15.7502C13.0501 15.7506 12.9318 15.7223 12.8251 15.6677L9.00009 13.6652L5.17509 15.6677C4.92169 15.8009 4.61453 15.7783 4.38341 15.6093C4.15228 15.4403 4.03751 15.1545 4.08759 14.8727L4.83759 10.6502L1.74759 7.65015C1.55113 7.4541 1.479 7.16559 1.56009 6.90015C1.64877 6.62822 1.8844 6.4304 2.16759 6.39015L6.44259 5.76765L8.32509 1.92015C8.4504 1.66141 8.71259 1.49707 9.00009 1.49707C9.28758 1.49707 9.54977 1.66141 9.67509 1.92015L11.5801 5.76015L15.8551 6.38265C16.1383 6.4229 16.3739 6.62072 16.4626 6.89265C16.5437 7.15809 16.4715 7.4466 16.2751 7.64265L13.1851 10.6427L13.9351 14.8652C13.9898 15.1523 13.8727 15.445 13.6351 15.6152C13.4993 15.7103 13.3357 15.7578 13.1701 15.7502Z" fill="#FFC107"/></svg>' +
+              '<span class="text-gray-500 font-medium">4.8</span>' +
+              '<span class="text-gray-400 text-xs">(118)</span>' +
+            '</div>' +
+          '</div>' +
+          '<div class="mt-3 flex items-center justify-between gap-2 border-t border-gray-100 pt-2">' +
+            '<div class="flex items-center gap-2">' +
+              '<span class="text-gray-primary text-base font-bold">' + price + '</span>' +
+              (mrp ? ('<span class="text-gray-tertiary text-xs line-through">' + mrp + '</span>') : '') +
+            '</div>' +
+            '<button type="button" onclick="window.ProductAPI.addToCart(\'' + id + '\')" class="bg-primary-main hover:bg-primary-main-dark text-white inline-flex h-9 items-center justify-center gap-1.5 rounded-lg px-4 text-xs font-medium transition-all shadow-sm active:scale-95 cursor-pointer">' +
+              '<svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>' +
+              '<span>Add</span>' +
+            '</button>' +
+          '</div>' +
+        '</div>' +
+      '</li>';
+    },
+
+    /**
      * Render all product areas across all index pages & views
      */
     renderAll() {
@@ -311,14 +355,15 @@
 
       this.renderHomeBestSelling();
       this.renderHomeNewArrivals();
-      this.renderHomeProductSliders();
+      this.renderHomeColumnSliders(); // Top Rated, Top Items, Trending (3 horizontal items per slide)
+      this.renderHomeThemedSliders(); // Coffee, Beauty, etc.
       this.renderListingPages();
       this.renderRelatedSliders();
       this.renderHeaderLiveSearch();
     },
 
     /**
-     * 1. Render Best Selling Grids & Tabs
+     * 1. Render Best Selling Grids & Tabs (4 columns wide)
      */
     renderHomeBestSelling() {
       const containers = document.querySelectorAll('#best-selling-isotope-grid, .best-selling-tab-slider .swiper-wrapper, .best-selling-product-slider .swiper-wrapper');
@@ -366,26 +411,63 @@
     },
 
     /**
-     * 3. Render Special Themed Sliders
+     * 3. Render 3-Column Widget Sliders with Horizontal Rows (Top Rated, Top Items, Trending, Popular Items)
      */
-    renderHomeProductSliders() {
-      const themedSliders = [
-        { selector: '.top-rated-slider .swiper-wrapper', offset: 10, limit: 8 },
-        { selector: '.top-items-slider .swiper-wrapper', offset: 16, limit: 8 },
-        { selector: '.popular-items-slider .swiper-wrapper', offset: 22, limit: 8 },
-        { selector: '.trending-product-slider .swiper-wrapper', offset: 28, limit: 8 },
+    renderHomeColumnSliders() {
+      const columnConfigs = [
+        { selector: '.top-rated-slider .swiper-wrapper', offset: 10, count: 6 },
+        { selector: '.top-items-slider .swiper-wrapper', offset: 18, count: 6 },
+        { selector: '.trending-product-slider .swiper-wrapper', offset: 26, count: 6 },
+        { selector: '.popular-items-slider .swiper-wrapper', offset: 34, count: 6 },
+        { selector: '.top-picks-slider .swiper-wrapper', offset: 42, count: 6 },
+        { selector: '.hot-picks-slider .swiper-wrapper', offset: 50, count: 6 }
+      ];
+
+      columnConfigs.forEach(cfg => {
+        const containers = document.querySelectorAll(cfg.selector);
+        containers.forEach(container => {
+          const prods = this.getProducts({ offset: cfg.offset, limit: cfg.count });
+          if (prods.length === 0) return;
+
+          // Group products into chunks of 3 per slide
+          let slidesHtml = '';
+          const chunkSize = 3;
+          for (let i = 0; i < prods.length; i += chunkSize) {
+            const chunk = prods.slice(i, i + chunkSize);
+            let itemsHtml = '';
+            chunk.forEach(p => {
+              itemsHtml += this.generateHorizontalItemHtml(p);
+            });
+            slidesHtml += '<div class="swiper-slide"><ul class="space-y-4 sm:space-y-6 pb-1">' + itemsHtml + '</ul></div>';
+          }
+
+          container.innerHTML = slidesHtml;
+
+          const slider = container.closest('.swiper');
+          if (slider && slider.swiper) {
+            slider.swiper.update();
+          } else if (slider && typeof window.initSingleSwiper === 'function') {
+            window.initSingleSwiper(slider);
+          }
+        });
+      });
+    },
+
+    /**
+     * 4. Render Themed Full-Width Sliders (Coffee, Beauty, etc.)
+     */
+    renderHomeThemedSliders() {
+      const themedConfigs = [
         { selector: '.best-selling-coffee-slider .swiper-wrapper', offset: 4, limit: 8 },
         { selector: '.fresh-brews-slider .swiper-wrapper', offset: 8, limit: 8 },
         { selector: '.beauty-22-slider .swiper-wrapper', offset: 12, limit: 8 },
-        { selector: '.best-selling-22-slider .swiper-wrapper', offset: 18, limit: 8 },
-        { selector: '.hot-picks-slider .swiper-wrapper', offset: 14, limit: 8 },
-        { selector: '.top-picks-slider .swiper-wrapper', offset: 20, limit: 8 }
+        { selector: '.best-selling-22-slider .swiper-wrapper', offset: 16, limit: 8 }
       ];
 
-      themedSliders.forEach(item => {
-        const containers = document.querySelectorAll(item.selector);
+      themedConfigs.forEach(cfg => {
+        const containers = document.querySelectorAll(cfg.selector);
         containers.forEach(container => {
-          const prods = this.getProducts({ offset: item.offset, limit: item.limit });
+          const prods = this.getProducts({ offset: cfg.offset, limit: cfg.limit });
           if (prods.length === 0) return;
 
           let html = '';
@@ -405,7 +487,7 @@
     },
 
     /**
-     * 4. Render Shop / Listing Page Grids & Lists
+     * 5. Render Shop / Listing Page Grids & Lists
      */
     renderListingPages() {
       const urlParams = new URLSearchParams(window.location.search);
@@ -500,7 +582,7 @@
     },
 
     /**
-     * 5. Render Related Products Sliders
+     * 6. Render Related Products Sliders
      */
     renderRelatedSliders() {
       const containers = document.querySelectorAll('.related-product-slider .swiper-wrapper');
@@ -529,7 +611,7 @@
     },
 
     /**
-     * 6. Render Full Product Detail Page from API Data (100% Dynamic Content)
+     * 7. Render Full Product Detail Page from API Data (100% Dynamic Content)
      */
     renderProductDetailsPage(product) {
       if (!product) return;
@@ -611,7 +693,7 @@
           '</ul>';
       }
 
-      // 7. Middle Section - Color/Size/Quantity Box replacement with Product Selection & Unit
+      // 7. Middle Section - Pack Unit / Quantity Selector
       const stockSection = document.querySelector('main section .divide-dashed > div:nth-child(3)');
       if (stockSection) {
         stockSection.innerHTML = 
@@ -686,27 +768,12 @@
         }
       }
 
-      // 11. Sticky Cart Bar (Bottom Floating)
-      const stickyBar = document.querySelector('[x-data*="showFixedCart"]');
-      if (stickyBar) {
-        const stickyImg = stickyBar.querySelector('img');
-        if (stickyImg) stickyImg.src = this.getImageUrl(product, 0);
-        const stickyTitle = stickyBar.querySelector('h3, h4, a');
-        if (stickyTitle) stickyTitle.textContent = product.name;
-        const stickyPrice = stickyBar.querySelector('.text-primary-main.text-base, span.font-bold');
-        if (stickyPrice) stickyPrice.textContent = priceText;
-        const stickyBtn = stickyBar.querySelector('button');
-        if (stickyBtn) {
-          stickyBtn.onclick = () => window.ProductAPI.addToCart(product.id, 1);
-        }
-      }
-
-      // 12. Re-render Related Products Slider for this product's category
+      // 11. Re-render Related Products Slider for this product's category
       this.renderRelatedSliders();
     },
 
     /**
-     * 7. Live Autocomplete Search in Header
+     * 8. Live Autocomplete Search in Header
      */
     renderHeaderLiveSearch() {
       const searchInputs = document.querySelectorAll('input[placeholder*="Search for the items"]');
