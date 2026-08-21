@@ -10,7 +10,7 @@
 (function (window, document) {
   'use strict';
 
-  // API Endpoints & Storage Keys
+  // API Configuration
   const API_CONFIG = {
     CATALOG_URL: 'https://demo.wisetracktechnologies.com/api/catalog',
     DETAIL_URL: 'https://demo.wisetracktechnologies.com/api/catalog/',
@@ -21,7 +21,7 @@
   };
 
   /**
-   * Product API Service & UI Controller
+   * Product API Controller
    */
   const ProductAPI = {
     catalogUrl: API_CONFIG.CATALOG_URL,
@@ -35,10 +35,10 @@
      * Initialize Product API
      */
     async init() {
-      // 1. Read cached catalog for instant page load
+      // 1. Read cached catalog for zero-latency initial render
       this.loadFromCache();
 
-      // 2. Render all catalog-driven sections immediately
+      // 2. Render all catalog-driven components immediately
       this.renderAll();
 
       // 3. If currently on a product detail page, immediately fetch full product details via API
@@ -51,7 +51,7 @@
       // 4. Fetch live catalog from API in background
       await this.fetchCatalog();
 
-      // 5. If on product detail page and still not rendered
+      // 5. If on product detail page, make sure details are refreshed
       if (this.isProductDetailPage()) {
         const urlParams = new URLSearchParams(window.location.search);
         let id = urlParams.get('id') || API_CONFIG.DEFAULT_PRODUCT_ID;
@@ -60,7 +60,7 @@
         }
       }
 
-      // 6. Listen for custom events
+      // 6. Listen for events
       window.addEventListener('categories-updated', () => this.renderAll());
       window.addEventListener('popstate', () => this.init());
     },
@@ -68,6 +68,7 @@
     isProductDetailPage() {
       return window.location.pathname.includes('product-detail') || 
              window.location.pathname.includes('product-details') ||
+             document.getElementById('product-gallery-container') !== null ||
              document.querySelector('main [x-data*="activeTab"]') !== null ||
              document.querySelector('[data-quantity]') !== null;
     },
@@ -151,7 +152,7 @@
           return product;
         }
       } catch (error) {
-        console.warn('[ProductAPI] Failed to fetch product detail from API, using catalog fallback:', error);
+        console.warn('[ProductAPI] Detail API request fallback:', error);
         const fallback = this.getProductById(id);
         if (fallback) {
           this.currentProduct = fallback;
@@ -317,7 +318,7 @@
     },
 
     /**
-     * 1. Render Best Selling Grids & Tabs (Home 1, Home 2, Home 3, ...)
+     * 1. Render Best Selling Grids & Tabs
      */
     renderHomeBestSelling() {
       const containers = document.querySelectorAll('#best-selling-isotope-grid, .best-selling-tab-slider .swiper-wrapper, .best-selling-product-slider .swiper-wrapper');
@@ -365,7 +366,7 @@
     },
 
     /**
-     * 3. Render Special Themed Sliders (Coffee, Beauty, Top Rated, Top Items, Trending, Hot Picks)
+     * 3. Render Special Themed Sliders
      */
     renderHomeProductSliders() {
       const themedSliders = [
@@ -404,7 +405,7 @@
     },
 
     /**
-     * 4. Render Shop / Listing Page Grids & Lists (top-banner-with-1-col.html, left-sidebar-*.html)
+     * 4. Render Shop / Listing Page Grids & Lists
      */
     renderListingPages() {
       const urlParams = new URLSearchParams(window.location.search);
@@ -551,20 +552,20 @@
       }
 
       // 3. Render Images Gallery (Left Column)
-      const leftCol = document.querySelector('main section .w-full.xl\:w-1\/2 .space-y-6');
-      if (leftCol && Array.isArray(product.imageUrls) && product.imageUrls.length > 0) {
+      const galleryContainer = document.getElementById('product-gallery-container') || document.querySelector('main section .w-full.xl\:w-1\/2 .space-y-6');
+      if (galleryContainer && Array.isArray(product.imageUrls) && product.imageUrls.length > 0) {
         let imgsHtml = '';
         product.imageUrls.forEach((imgUrl, i) => {
-          imgsHtml += '<div class="bg-gray-50 rounded-2xl flex items-center justify-center p-4 border border-gray-100 shadow-sm overflow-hidden">' +
+          imgsHtml += '<div class="bg-gray-50 rounded-2xl flex items-center justify-center p-4 border border-gray-100 shadow-sm overflow-hidden min-h-[360px]">' +
             '<img alt="' + (product.name + ' image ' + (i + 1)) + '" class="w-full max-h-[520px] object-contain rounded-xl transition-transform duration-300 hover:scale-105" src="' + imgUrl + '" onerror="this.onerror=null;this.src=\'src/images/home-1/best-selling-tabs/product-1.webp\';" />' +
           '</div>';
         });
-        leftCol.innerHTML = imgsHtml;
+        galleryContainer.innerHTML = imgsHtml;
       }
 
       // 4. Product Titles
       document.querySelectorAll('h3.text-2xl, h1, h2.product-title').forEach(el => {
-        if (el.closest('main') || el.classList.contains('product-title') || el.textContent.includes('Summer Petal') || el.textContent.includes('SmartLife')) {
+        if (el.closest('main') || el.classList.contains('product-title') || el.textContent.includes('Summer Petal') || el.textContent.includes('SmartLife') || el.textContent.includes('Bohemian')) {
           el.textContent = product.name;
         }
       });
@@ -601,7 +602,7 @@
       const middleSection = document.querySelector('main section .divide-dashed > div:nth-child(2)');
       if (middleSection) {
         middleSection.innerHTML = 
-          '<p class="text-gray-secondary mb-4 text-base leading-relaxed sm:mb-6">' + (product.description || 'Premium quality verified item from WiseTrack catalog.') + '</p>' +
+          '<p class="text-gray-secondary mb-4 text-base leading-relaxed sm:mb-6">' + (product.description || 'Pure, authentic, and verified quality item from WiseTrack catalog.') + '</p>' +
           '<ul class="space-y-3.5 pt-2">' +
             '<li class="flex items-center gap-3.5"><span class="bg-primary-main/10 text-primary-main p-1 rounded-full"><svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></span><p class="text-gray-700 text-sm font-medium">Category: <span class="text-primary-main font-semibold">' + (product.category || 'General') + '</span></p></li>' +
             '<li class="flex items-center gap-3.5"><span class="bg-primary-main/10 text-primary-main p-1 rounded-full"><svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></span><p class="text-gray-700 text-sm font-medium">Packaging Unit: <span class="text-gray-900 font-semibold">' + (product.unit || 'Standard Unit') + '</span></p></li>' +
@@ -658,7 +659,7 @@
         }
       });
 
-      // 9. Specifications Tab List
+      // 9. Specifications Tab List Table
       const specsList = document.querySelector('div[x-show*="specification"] ul.divide-y');
       if (specsList) {
         specsList.innerHTML = 
