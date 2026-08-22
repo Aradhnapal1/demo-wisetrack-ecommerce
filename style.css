@@ -5755,8 +5755,8 @@
     @media (width >= 48rem) {
       -webkit-box-orient: horizontal;
       -webkit-box-direction: normal;
-          -ms-flex-direction: row;
-              flex-direction: row;
+          /* -ms-flex-direction: row; */
+              /* flex-direction: row; */
     }
   }
   .md\:gap-3 {
