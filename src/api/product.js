@@ -422,6 +422,10 @@
       this.renderListingPages();
       this.renderRelatedSliders();
       this.renderHeaderLiveSearch();
+
+      if (window.WishlistAPI && typeof window.WishlistAPI.updateHeartButtons === 'function') {
+        window.WishlistAPI.updateHeartButtons();
+      }
     },
 
     /**
@@ -985,6 +989,11 @@
     },
 
     toggleWishlist(productId) {
+      if (window.WishlistAPI && typeof window.WishlistAPI.toggleWishlist === 'function') {
+        window.WishlistAPI.toggleWishlist(productId);
+        return;
+      }
+
       const product = this.currentProduct && this.currentProduct.id === productId ? this.currentProduct : this.getProductById(productId);
       if (!product) return;
 
