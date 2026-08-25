@@ -660,7 +660,7 @@
               '<!-- Action Buttons -->' +
               '<td class="py-4 pr-4 pl-6 text-right">' +
                 '<div class="flex items-center justify-end gap-3">' +
-                  '<button type="button" onclick="window.ProductAPI ? window.ProductAPI.addToCart(\'' + id + '\') : null" class="inline-flex items-center gap-2 rounded-lg bg-primary-main hover:bg-primary-main-dark text-white px-4 py-2.5 text-sm font-semibold transition-all duration-200 shadow-sm hover:shadow active:scale-95 cursor-pointer">' +
+                  '<button type="button" onclick="window.CartAPI ? window.CartAPI.addToCart(\'' + id + '\') : (window.ProductAPI ? window.ProductAPI.addToCart(\'' + id + '\') : null)" class="inline-flex items-center gap-2 rounded-lg bg-primary-main hover:bg-primary-main-dark text-white px-4 py-2.5 text-sm font-semibold transition-all duration-200 shadow-sm hover:shadow active:scale-95 cursor-pointer">' +
                     '<svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>' +
                     '<span>Add to Cart</span>' +
                   '</button>' +

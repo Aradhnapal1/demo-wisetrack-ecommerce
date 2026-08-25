@@ -960,6 +960,11 @@
      * Cart & Wishlist Actions
      */
     addToCart(productId, qty) {
+      if (window.CartAPI && typeof window.CartAPI.addToCart === 'function') {
+        window.CartAPI.addToCart(productId, qty);
+        return;
+      }
+
       qty = qty || 1;
       const product = this.currentProduct && this.currentProduct.id === productId ? this.currentProduct : this.getProductById(productId);
       if (!product) return;
