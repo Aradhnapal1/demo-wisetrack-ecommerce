@@ -714,28 +714,14 @@
      * Show UI notification toast
      */
     showToast(message) {
-      if (window.ProductAPI && typeof window.ProductAPI.showToast === 'function') {
-        window.ProductAPI.showToast(message);
+      if (window.CartAPI && typeof window.CartAPI.showToast === 'function') {
+        window.CartAPI.showToast(message, 'wishlist');
         return;
       }
-
-      let toast = document.getElementById('wisetrack-toast');
-      if (!toast) {
-        toast = document.createElement('div');
-        toast.id = 'wisetrack-toast';
-        toast.className = 'fixed bottom-5 right-5 z-[99999] bg-gray-900 text-white px-4 py-3 rounded-xl shadow-2xl text-sm font-medium transition-all duration-300 translate-y-20 opacity-0 flex items-center gap-2';
-        document.body.appendChild(toast);
+      if (window.ProductAPI && typeof window.ProductAPI.showToast === 'function') {
+        window.ProductAPI.showToast(message, 'wishlist');
+        return;
       }
-
-      toast.innerHTML = '<svg class="size-5 text-red-400 shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>' +
-        '<span>' + message + '</span>';
-      toast.classList.remove('translate-y-20', 'opacity-0');
-      toast.classList.add('translate-y-0', 'opacity-100');
-
-      setTimeout(() => {
-        toast.classList.add('translate-y-20', 'opacity-0');
-        toast.classList.remove('translate-y-0', 'opacity-100');
-      }, 3000);
     }
   };
 

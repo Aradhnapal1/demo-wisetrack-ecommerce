@@ -642,31 +642,126 @@
     },
 
     /**
-     * Show prominent Success Alert / Toast notification
+     * Show prominent Success Alert / Toast notification (Always clearly visible below sticky header)
+     * @param {string} message
+     * @param {string} type - 'cart' | 'wishlist' | 'info'
      */
-    showToast(message) {
-      let toast = document.getElementById('wisetrack-cart-toast');
-      if (!toast) {
-        toast = document.createElement('div');
-        toast.id = 'wisetrack-cart-toast';
-        toast.className = 'fixed top-6 right-6 z-[999999] flex items-center gap-3 bg-gray-900 text-white px-5 py-3.5 rounded-2xl shadow-2xl text-sm font-semibold transition-all duration-300 transform -translate-y-8 opacity-0 border border-gray-700/50 backdrop-blur-md';
-        document.body.appendChild(toast);
+    showToast(message, type) {
+      type = type || 'cart';
+
+      // 1. Ensure Toast Styles are injected in head
+      if (!document.getElementById('wisetrack-toast-styles')) {
+        const style = document.createElement('style');
+        style.id = 'wisetrack-toast-styles';
+        style.textContent = `
+          @keyframes wtToastIn {
+            0% { opacity: 0; transform: translateY(-20px) scale(0.95); }
+            100% { opacity: 1; transform: translateY(0) scale(1); }
+          }
+          @keyframes wtToastOut {
+            0% { opacity: 1; transform: translateY(0) scale(1); }
+            100% { opacity: 0; transform: translateY(-20px) scale(0.95); }
+          }
+          #wisetrack-toast-container {
+            position: fixed !important;
+            top: 105px !important;
+            right: 24px !important;
+            z-index: 2147483647 !important;
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 10px !important;
+            max-width: 420px !important;
+            width: calc(100% - 48px) !important;
+            pointer-events: none !important;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+          }
+          .wisetrack-toast-item {
+            pointer-events: auto !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 14px !important;
+            background: #111827 !important;
+            color: #ffffff !important;
+            padding: 14px 18px !important;
+            border-radius: 14px !important;
+            border: 1px solid rgba(255, 255, 255, 0.12) !important;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.3) !important;
+            animation: wtToastIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+            cursor: pointer !important;
+            font-size: 14px !important;
+            font-weight: 500 !important;
+            line-height: 1.4 !important;
+          }
+          .wisetrack-toast-item.is-hiding {
+            animation: wtToastOut 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+          }
+          .wisetrack-toast-icon {
+            width: 32px !important;
+            height: 32px !important;
+            border-radius: 50% !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            flex-shrink: 0 !important;
+          }
+          .wisetrack-toast-icon.is-cart {
+            background: rgba(16, 185, 129, 0.2) !important;
+            color: #34d399 !important;
+          }
+          .wisetrack-toast-icon.is-wishlist {
+            background: rgba(239, 68, 68, 0.2) !important;
+            color: #f87171 !important;
+          }
+        `;
+        document.head.appendChild(style);
       }
 
-      toast.innerHTML =
-        '<div class="size-7 flex items-center justify-center rounded-full bg-emerald-500 text-white shrink-0 shadow-sm">' +
-          '<svg class="size-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>' +
-        '</div>' +
-        '<span class="text-sm font-medium tracking-wide">' + message + '</span>';
+      // 2. Get or create container
+      let container = document.getElementById('wisetrack-toast-container');
+      if (!container) {
+        container = document.createElement('div');
+        container.id = 'wisetrack-toast-container';
+        document.body.appendChild(container);
+      }
 
-      toast.classList.remove('-translate-y-8', 'opacity-0', 'pointer-events-none');
-      toast.classList.add('translate-y-0', 'opacity-100');
+      // Remove existing toast items
+      while (container.firstChild) {
+        container.removeChild(container.firstChild);
+      }
 
-      if (this.toastTimeout) clearTimeout(this.toastTimeout);
-      this.toastTimeout = setTimeout(() => {
-        toast.classList.remove('translate-y-0', 'opacity-100');
-        toast.classList.add('-translate-y-8', 'opacity-0', 'pointer-events-none');
-      }, 3200);
+      // 3. Create toast element
+      const toast = document.createElement('div');
+      toast.className = 'wisetrack-toast-item';
+
+      let iconHtml = '';
+      if (type === 'wishlist') {
+        iconHtml =
+          '<div class="wisetrack-toast-icon is-wishlist">' +
+            '<svg style="width:16px;height:16px;" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>' +
+          '</div>';
+      } else {
+        iconHtml =
+          '<div class="wisetrack-toast-icon is-cart">' +
+            '<svg style="width:18px;height:18px;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>' +
+          '</div>';
+      }
+
+      toast.innerHTML = iconHtml +
+        '<span style="flex:1;color:#f9fafb;font-size:14px;">' + message + '</span>' +
+        '<span style="color:#9ca3af;font-size:18px;line-height:1;padding:2px 4px;">&times;</span>';
+
+      container.appendChild(toast);
+
+      // Dismiss handler
+      const removeToast = () => {
+        toast.classList.add('is-hiding');
+        setTimeout(() => {
+          if (toast.parentElement) toast.remove();
+        }, 260);
+      };
+
+      toast.onclick = removeToast;
+      setTimeout(removeToast, 3200);
     }
   };
 

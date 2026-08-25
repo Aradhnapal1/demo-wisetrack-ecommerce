@@ -1026,29 +1026,11 @@
       window.dispatchEvent(new CustomEvent('open-quick-view', { detail: product }));
     },
 
-    showToast(message) {
+    showToast(message, type) {
       if (window.CartAPI && typeof window.CartAPI.showToast === 'function') {
-        window.CartAPI.showToast(message);
+        window.CartAPI.showToast(message, type);
         return;
       }
-
-      let toast = document.getElementById('wisetrack-cart-toast') || document.getElementById('wisetrack-toast');
-      if (!toast) {
-        toast = document.createElement('div');
-        toast.id = 'wisetrack-toast';
-        toast.className = 'fixed bottom-5 right-5 z-[99999] bg-gray-900 text-white px-4 py-3 rounded-xl shadow-2xl text-sm font-medium transition-all duration-300 translate-y-20 opacity-0 flex items-center gap-2';
-        document.body.appendChild(toast);
-      }
-
-      toast.innerHTML = '<svg class="size-5 text-green-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>' +
-        '<span>' + message + '</span>';
-      toast.classList.remove('translate-y-20', 'opacity-0');
-      toast.classList.add('translate-y-0', 'opacity-100');
-
-      setTimeout(() => {
-        toast.classList.add('translate-y-20', 'opacity-0');
-        toast.classList.remove('translate-y-0', 'opacity-100');
-      }, 3000);
     }
   };
 
