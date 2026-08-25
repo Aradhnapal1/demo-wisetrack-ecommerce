@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 
 <html lang="en">
   
@@ -4376,9 +4376,12 @@
               </div>
               <div>
                 <button
-                  class="bg-primary-main hover:bg-primary-main-dark text-success-light flex h-12 w-full items-center justify-center rounded-lg text-base font-medium transition-all duration-200"
+                  id="place-order-btn"
+                  onclick="window.CheckoutAPI ? window.CheckoutAPI.placeOrder() : null"
+                  class="bg-primary-main hover:bg-primary-main-dark text-white flex h-12 w-full items-center justify-center rounded-lg text-base font-semibold transition-all duration-200 shadow-md hover:shadow-lg active:scale-95 cursor-pointer"
+                  type="button"
                 >
-                  Proceed to checkout
+                  Place Order
                 </button>
               </div>
             </div>
@@ -6078,7 +6081,9 @@
 <script defer src="src/api/category.js"></script>
 <script defer src="src/api/product.js"></script>
   <script defer src="src/api/cart.js"></script>
-  <script defer src="src/api/wishlist.js"></script></body>
+  <script defer src="src/api/wishlist.js"></script>
+  <script defer src="src/api/checkout.js"></script>
+  <script defer src="src/api/orders.js"></script></body>
 
 <!-- Mirrored from storly.riveuptheme.com/checkout-1.html by HTTrack Website Copier/3.x [XR&CO'2014], Fri, 14 Aug 2026 08:13:16 GMT -->
 </html>
