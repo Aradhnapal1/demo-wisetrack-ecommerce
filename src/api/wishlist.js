@@ -12,7 +12,9 @@
   // API Configuration
   const API_CONFIG = {
     URL: 'https://demo.wisetracktechnologies.com/api/shopper/wishlist',
+    CATALOG_DETAIL_URL: 'https://demo.wisetracktechnologies.com/api/catalog/',
     CACHE_KEY: 'wisetrack_wishlist',
+    PRODUCTS_CACHE_KEY: 'wisetrack_wishlist_products_cache',
     CACHE_TIMESTAMP_KEY: 'wisetrack_wishlist_time',
     TOKEN_KEYS: ['wisetrack_token', 'token', 'auth_token', 'jwt_token', 'access_token', 'user_token']
   };
@@ -22,7 +24,9 @@
    */
   const WishlistAPI = {
     url: API_CONFIG.URL,
-    wishlist: [], // Array of product IDs or product objects
+    catalogDetailUrl: API_CONFIG.CATALOG_DETAIL_URL,
+    wishlist: [], // Array of product IDs or objects
+    productDetailsCache: {}, // In-memory map: id -> full product object
     isLoaded: false,
     isLoading: false,
 
@@ -60,7 +64,7 @@
      * Initialize Wishlist Service
      */
     async init() {
-      // 1. Load initial cache from localStorage for instant render
+      // 1. Load initial cache from localStorage for instant zero-latency render
       this.loadFromCache();
 
       // 2. Initial UI updates (counters, heart buttons, wishlist table)
@@ -69,9 +73,20 @@
       // 3. Fetch live wishlist from API in background
       await this.fetchWishlist();
 
-      // 4. Register event listeners
-      window.addEventListener('catalog:loaded', () => this.updateAllUI());
-      window.addEventListener('catalog-loaded', () => this.updateAllUI());
+      // 4. If on wishlist page, ensure all products have full details fetched
+      if (this.isWishlistPage()) {
+        await this.syncWishlistProductDetails();
+      }
+
+      // 5. Register event listeners
+      window.addEventListener('catalog:loaded', () => {
+        this.syncWishlistProductDetails();
+        this.updateAllUI();
+      });
+      window.addEventListener('catalog-loaded', () => {
+        this.syncWishlistProductDetails();
+        this.updateAllUI();
+      });
       window.addEventListener('product:detail-loaded', () => this.updateHeartButtons());
       window.addEventListener('auth:login', () => this.fetchWishlist());
       window.addEventListener('auth:logout', () => {
@@ -80,11 +95,18 @@
         this.updateAllUI();
       });
       window.addEventListener('storage', (e) => {
-        if (e.key === API_CONFIG.CACHE_KEY) {
+        if (e.key === API_CONFIG.CACHE_KEY || e.key === API_CONFIG.PRODUCTS_CACHE_KEY) {
           this.loadFromCache();
           this.updateAllUI();
         }
       });
+    },
+
+    isWishlistPage() {
+      return window.location.pathname.includes('wishlist') ||
+             document.getElementById('wishlist-container') !== null ||
+             document.getElementById('wishlist-items-table') !== null ||
+             document.querySelector('[data-wishlist-view]') !== null;
     },
 
     /**
@@ -103,6 +125,16 @@
       } catch (err) {
         console.warn('[WishlistAPI] Cache read warning:', err);
       }
+
+      try {
+        const cachedProducts = localStorage.getItem(API_CONFIG.PRODUCTS_CACHE_KEY);
+        if (cachedProducts) {
+          const parsedObj = JSON.parse(cachedProducts);
+          if (parsedObj && typeof parsedObj === 'object') {
+            this.productDetailsCache = Object.assign(this.productDetailsCache, parsedObj);
+          }
+        }
+      } catch (err) {}
     },
 
     /**
@@ -115,6 +147,10 @@
       } catch (err) {
         console.warn('[WishlistAPI] Cache save warning:', err);
       }
+
+      try {
+        localStorage.setItem(API_CONFIG.PRODUCTS_CACHE_KEY, JSON.stringify(this.productDetailsCache));
+      } catch (err) {}
     },
 
     /**
@@ -144,8 +180,16 @@
             // Normalize items to product IDs or objects
             this.wishlist = items.map(item => {
               if (typeof item === 'string') return item;
-              if (item && item.id) return item.id;
-              if (item && item.productId) return item.productId;
+              if (item && item.id) {
+                // Cache item if it has details
+                if (item.name || item.imageUrls || item.price) {
+                  this.productDetailsCache[String(item.id)] = item;
+                }
+                return String(item.id);
+              }
+              if (item && item.productId) {
+                return String(item.productId);
+              }
               return item;
             }).filter(Boolean);
 
@@ -165,7 +209,57 @@
         this.dispatchEvents();
       }
 
+      // If on wishlist page, load full product details in background
+      if (this.isWishlistPage()) {
+        this.syncWishlistProductDetails();
+      }
+
       return this.wishlist;
+    },
+
+    /**
+     * Synchronize and fetch missing product details for wishlist items
+     */
+    async syncWishlistProductDetails() {
+      const missingIds = [];
+      this.wishlist.forEach(item => {
+        const id = typeof item === 'string' ? item : (item && item.id ? item.id : null);
+        if (!id) return;
+        const strId = String(id);
+        const cached = this.productDetailsCache[strId];
+        if (!cached || !cached.name || !cached.imageUrls || cached.price === undefined) {
+          // Check if ProductAPI has it in memory
+          if (window.ProductAPI && typeof window.ProductAPI.getProductById === 'function') {
+            const fromProd = window.ProductAPI.getProductById(strId);
+            if (fromProd && fromProd.id === strId) {
+              this.productDetailsCache[strId] = fromProd;
+              return;
+            }
+          }
+          missingIds.push(strId);
+        }
+      });
+
+      if (missingIds.length > 0) {
+        // Fetch missing products in parallel from catalog API
+        const fetchPromises = missingIds.map(async (id) => {
+          try {
+            const res = await fetch(this.catalogDetailUrl + encodeURIComponent(id));
+            if (res.ok) {
+              const product = await res.json();
+              if (product && product.id) {
+                this.productDetailsCache[String(product.id)] = product;
+              }
+            }
+          } catch (e) {
+            console.warn('[WishlistAPI] Detail fetch fallback for ' + id, e);
+          }
+        });
+
+        await Promise.all(fetchPromises);
+        this.saveToCache();
+        this.renderWishlistPage();
+      }
     },
 
     /**
@@ -175,6 +269,12 @@
     async addToWishlist(productId) {
       if (!productId) return;
       const strId = String(productId);
+
+      // Cache product details if available in ProductAPI
+      if (window.ProductAPI && typeof window.ProductAPI.getProductById === 'function') {
+        const p = window.ProductAPI.getProductById(strId);
+        if (p) this.productDetailsCache[strId] = p;
+      }
 
       if (!this.isInWishlist(strId)) {
         this.wishlist.push(strId);
@@ -286,27 +386,83 @@
     },
 
     /**
+     * Helper to get full image URL from product object
+     */
+    getImageUrl(product) {
+      if (!product) return 'src/images/home-1/best-selling-tabs/product-1.webp';
+      if (window.ProductAPI && typeof window.ProductAPI.getImageUrl === 'function') {
+        return window.ProductAPI.getImageUrl(product, 0);
+      }
+      if (Array.isArray(product.imageUrls) && product.imageUrls.length > 0 && product.imageUrls[0]) {
+        return product.imageUrls[0];
+      }
+      if (Array.isArray(product.images) && product.images.length > 0 && product.images[0]) {
+        return product.images[0];
+      }
+      if (typeof product.image === 'string' && product.image.length > 0) {
+        return product.image;
+      }
+      return 'src/images/home-1/best-selling-tabs/product-1.webp';
+    },
+
+    /**
+     * Helper to format price with proper currency symbol (matches ProductAPI: ₹)
+     */
+    formatPrice(amount) {
+      if (window.ProductAPI && typeof window.ProductAPI.formatPrice === 'function') {
+        return window.ProductAPI.formatPrice(amount);
+      }
+      if (typeof amount !== 'number' || isNaN(amount)) amount = 0;
+      return '₹' + amount.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+    },
+
+    /**
      * Helper to get full product info from catalog or cache
      */
     getProductInfo(productId) {
-      if (window.ProductAPI && typeof window.ProductAPI.getProductById === 'function') {
-        const found = window.ProductAPI.getProductById(productId);
-        if (found) return found;
+      const strId = String(productId);
+
+      // 1. Check in-memory product cache
+      if (this.productDetailsCache[strId]) {
+        return this.productDetailsCache[strId];
       }
-      // Check cached catalog
+
+      // 2. Check ProductAPI live catalog
+      if (window.ProductAPI && typeof window.ProductAPI.getProductById === 'function') {
+        const found = window.ProductAPI.getProductById(strId);
+        if (found && (found.id === strId || String(found.id) === strId)) {
+          this.productDetailsCache[strId] = found;
+          return found;
+        }
+      }
+
+      // 3. Check cached catalog
       try {
         const cachedCatalog = JSON.parse(localStorage.getItem('wisetrack_catalog_cache') || '[]');
-        const found = cachedCatalog.find(p => String(p.id) === String(productId));
-        if (found) return found;
+        const found = cachedCatalog.find(p => String(p.id) === strId);
+        if (found) {
+          this.productDetailsCache[strId] = found;
+          return found;
+        }
+      } catch (e) {}
+
+      // 4. Check wishlist products cache
+      try {
+        const cachedWishlistProds = JSON.parse(localStorage.getItem(API_CONFIG.PRODUCTS_CACHE_KEY) || '{}');
+        if (cachedWishlistProds && cachedWishlistProds[strId]) {
+          this.productDetailsCache[strId] = cachedWishlistProds[strId];
+          return cachedWishlistProds[strId];
+        }
       } catch (e) {}
 
       return {
-        id: productId,
-        name: 'Product Item',
+        id: strId,
+        name: 'Loading Product...',
         price: 0,
-        mrp: 0,
-        category: 'General',
-        image: 'src/images/home-1/best-selling-tabs/product-1.webp'
+        mrp: null,
+        category: 'Grocery',
+        unit: 'pcs',
+        imageUrls: ['src/images/home-1/best-selling-tabs/product-1.webp']
       };
     },
 
@@ -352,6 +508,8 @@
         if (count > 0) {
           el.classList.remove('hidden');
           el.style.display = '';
+        } else {
+          el.classList.add('hidden');
         }
       });
 
@@ -376,7 +534,6 @@
      * Update all heart buttons on product cards and product details
      */
     updateHeartButtons() {
-      // Find all buttons that call toggleWishlist
       const buttons = document.querySelectorAll('button[onclick*="toggleWishlist"], [data-wishlist-btn]');
       buttons.forEach(btn => {
         const onclickAttr = btn.getAttribute('onclick') || '';
@@ -423,12 +580,7 @@
      * Render full Wishlist Page table/cards (on wishlist.html / empty-wishlist-screen.html)
      */
     renderWishlistPage() {
-      const isWishlistPage = window.location.pathname.includes('wishlist') ||
-                             document.getElementById('wishlist-container') !== null ||
-                             document.getElementById('wishlist-items-table') !== null ||
-                             document.querySelector('[data-wishlist-view]') !== null;
-
-      if (!isWishlistPage) return;
+      if (!this.isWishlistPage()) return;
 
       const mainContainer = document.getElementById('wishlist-container') ||
                             document.querySelector('main section .custom-container') ||
@@ -444,14 +596,14 @@
         mainContainer.innerHTML = 
           '<div class="mx-auto max-w-[520px] rounded-2xl border border-gray-200 bg-white p-8 sm:p-12 shadow-sm text-center my-8">' +
             '<div class="flex flex-col items-center gap-6">' +
-              '<div class="w-36 sm:w-44 flex items-center justify-center p-6 bg-red-50 rounded-full text-red-500">' +
+              '<div class="w-36 sm:w-44 flex items-center justify-center p-6 bg-red-50 rounded-full text-red-500 mx-auto">' +
                 '<svg class="size-20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"/></svg>' +
               '</div>' +
               '<div>' +
                 '<h2 class="text-2xl sm:text-3xl font-bold text-gray-900 mb-2 font-tiktok-sans">Your Wishlist is Empty</h2>' +
                 '<p class="text-gray-500 text-sm sm:text-base max-w-sm mx-auto">Explore our wide range of products and save your favorites to view or purchase later.</p>' +
               '</div>' +
-              '<a href="top-banner-with-1-col.html" class="inline-flex items-center justify-center gap-2 rounded-xl bg-primary-main hover:bg-primary-main-dark text-white px-8 py-3.5 text-base font-semibold transition-all duration-300 shadow-md hover:shadow-lg active:scale-95">' +
+              '<a href="top-banner-with-1-col.html" class="inline-flex items-center justify-center gap-2 rounded-xl bg-primary-main hover:bg-primary-main-dark text-white px-8 py-3.5 text-base font-semibold transition-all duration-300 shadow-md hover:shadow-lg active:scale-95 mx-auto">' +
                 '<svg class="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>' +
                 '<span>Start Shopping</span>' +
               '</a>' +
@@ -461,17 +613,18 @@
         // Render Wishlist Table / Grid
         let rowsHtml = '';
         this.wishlist.forEach(item => {
-          const id = typeof item === 'string' ? item : item.id;
+          const id = typeof item === 'string' ? item : (item && item.id ? item.id : String(item));
           const product = this.getProductInfo(id);
 
-          const img = (product.images && product.images[0]) || product.image || 'src/images/home-1/best-selling-tabs/product-1.webp';
+          const img = this.getImageUrl(product);
           const name = product.name || 'Product Item';
-          const priceVal = typeof product.price === 'number' ? product.price : parseFloat(product.price) || 0;
-          const mrpVal = typeof product.mrp === 'number' ? product.mrp : parseFloat(product.mrp) || (priceVal > 0 ? Math.round(priceVal * 1.2) : 0);
-          const price = '$' + priceVal.toFixed(2);
-          const mrp = mrpVal > priceVal ? ('$' + mrpVal.toFixed(2)) : '';
+          const price = this.formatPrice(product.price || 0);
+          const mrp = product.mrp && product.mrp > product.price ? this.formatPrice(product.mrp) : '';
           const category = product.category || 'Grocery';
           const unit = product.unit ? ('<span class="text-xs text-gray-400 font-normal"> / ' + product.unit + '</span>') : '';
+          const stockText = product.availability === 'out_of_stock' || product.stock === 0 ? 'Out of Stock' : 'In Stock';
+          const stockClass = stockText === 'In Stock' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-red-50 text-red-700 border-red-200';
+          const dotClass = stockText === 'In Stock' ? 'bg-emerald-500' : 'bg-red-500';
 
           rowsHtml += 
             '<tr class="border-b border-gray-200 transition-colors hover:bg-gray-50/70" id="wishlist-row-' + id + '">' +
@@ -499,9 +652,9 @@
               '</td>' +
               '<!-- Stock Status -->' +
               '<td class="py-4 px-6 text-center">' +
-                '<span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700 border border-emerald-200">' +
-                  '<span class="size-1.5 rounded-full bg-emerald-500"></span>' +
-                  'In Stock' +
+                '<span class="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium border ' + stockClass + '">' +
+                  '<span class="size-1.5 rounded-full ' + dotClass + '"></span>' +
+                  stockText +
                 '</span>' +
               '</td>' +
               '<!-- Action Buttons -->' +
