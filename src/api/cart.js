@@ -106,6 +106,13 @@
           this.updateAllUI();
         }
       });
+
+      // 5. When user clicks cart trigger in header, ensure drawer is fully refreshed
+      document.addEventListener('click', (e) => {
+        if (e.target.closest('[x-on\\:click*="cartOpen"], [@click*="cartOpen"], [href*="cart"], .cursor-pointer')) {
+          setTimeout(() => this.updateAllUI(), 10);
+        }
+      });
     },
 
     /**
@@ -213,7 +220,7 @@
       this.saveToCache();
       this.updateAllUI();
       this.dispatchEvents();
-      this.showToast('Added "' + (product.name || 'Item') + '" to cart!');
+      this.showToast('Product added to cart successfully!');
       this.syncWithApi();
     },
 
@@ -251,7 +258,7 @@
         this.saveToCache();
         this.updateAllUI();
         this.dispatchEvents();
-        this.showToast('Removed "' + (removedItem.name || 'Item') + '" from cart.');
+        this.showToast('Removed from cart.');
         this.syncWithApi();
       }
     },
@@ -375,47 +382,59 @@
     },
 
     /**
-     * Update cart count badges across desktop and mobile header
+     * Update cart count badges ONLY on Header Cart icons & Nav (NEVER on Add to Cart buttons)
      */
     updateBadges() {
       const count = this.getCount();
 
-      // 1. Update text badge elements
+      // 1. Update text badge elements explicitly meant for cart count
       document.querySelectorAll('#cart-count, [data-cart-count], .cart-count').forEach(el => {
         el.textContent = count;
       });
 
-      // 2. Update Desktop Header Cart text (e.g. "0- Items" or "2 Items")
-      document.querySelectorAll('.cursor-pointer span.text-gray-primary.block').forEach(el => {
-        if (el.textContent.includes('Item') || el.textContent.includes('item')) {
+      // 2. Update Desktop Header Cart text (e.g. "0- Items" -> "2 Items")
+      document.querySelectorAll('.cursor-pointer span.text-gray-primary.block, #header-cart-items-count').forEach(el => {
+        if (el.textContent.includes('Item') || el.textContent.includes('item') || el.id === 'header-cart-items-count') {
           el.textContent = count + ' Items';
         }
       });
 
-      // 3. Update Mobile Header / Bar Cart Trigger
-      document.querySelectorAll('button[class*="Cart"], [aria-label*="cart"], button svg path[d*="M16 11V7"]').forEach(el => {
-        const btn = el.closest('button');
-        if (btn) {
-          let badge = btn.querySelector('.cart-dynamic-badge');
-          if (!badge && count > 0) {
-            badge = document.createElement('span');
-            badge.className = 'cart-dynamic-badge absolute -top-1.5 -right-2 flex size-4.5 items-center justify-center rounded-full bg-primary-main text-[10px] font-bold text-white leading-none shadow-sm';
-            btn.classList.add('relative');
-            btn.appendChild(badge);
-          }
-          if (badge) {
-            badge.textContent = count;
-            badge.style.display = count > 0 ? 'flex' : 'none';
-          }
+      // 3. Update Header Cart round icon button badge (ONLY in header)
+      document.querySelectorAll('header button.bg-primary-main-dark, header div.bg-primary-main-dark').forEach(btn => {
+        let badge = btn.querySelector('.header-cart-badge');
+        if (!badge && count > 0) {
+          badge = document.createElement('span');
+          badge.className = 'header-cart-badge absolute -top-1.5 -right-1 flex size-5 items-center justify-center rounded-full bg-red-500 text-[11px] font-bold text-white leading-none shadow-md';
+          btn.classList.add('relative');
+          btn.appendChild(badge);
+        }
+        if (badge) {
+          badge.textContent = count;
+          badge.style.display = count > 0 ? 'flex' : 'none';
+        }
+      });
+
+      // 4. Update Mobile Bottom Bar Cart badge
+      document.querySelectorAll('.pb-safe a[href*="cart"], [class*="fixed right-0 bottom-0"] a[href*="cart"]').forEach(link => {
+        let badge = link.querySelector('.mobile-cart-badge');
+        if (!badge && count > 0) {
+          badge = document.createElement('span');
+          badge.className = 'mobile-cart-badge absolute top-1 right-1/4 flex size-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white';
+          link.classList.add('relative');
+          link.appendChild(badge);
+        }
+        if (badge) {
+          badge.textContent = count;
+          badge.style.display = count > 0 ? 'flex' : 'none';
         }
       });
     },
 
     /**
-     * Dynamically render Cart Drawer in the Header
+     * Dynamically render Cart Drawer in the Header & recalculate subtotal
      */
     renderCartDrawer() {
-      const drawerPanels = document.querySelectorAll('#cart-drawer-panel-5, [id*="cart-drawer"]');
+      const drawerPanels = document.querySelectorAll('#cart-drawer-panel-5, #cart-drawer-panel-3, [id*="cart-drawer"]');
       if (drawerPanels.length === 0) return;
 
       const count = this.getCount();
@@ -423,68 +442,85 @@
       const totalFormatted = this.formatPrice(total);
 
       drawerPanels.forEach(panel => {
-        const countHeader = panel.querySelector('.border-gray-tertiary\\/24.shrink-0 p.text-gray-secondary');
-        if (countHeader) {
-          countHeader.textContent = count + (count === 1 ? ' item' : ' items');
-        }
+        // 1. Update items count in drawer top header
+        const countHeaders = panel.querySelectorAll('h2 + p.text-gray-secondary, .shrink-0 p.text-gray-secondary');
+        countHeaders.forEach(ch => {
+          ch.textContent = count + (count === 1 ? ' item' : ' items');
+        });
 
+        // 2. Populate items in scroll container
         const scrollContainer = panel.querySelector('.custom-scrollbar.flex-1');
-        if (!scrollContainer) return;
-
-        if (this.cart.length === 0) {
-          scrollContainer.innerHTML =
-            '<div class="flex flex-col items-center justify-center py-16 text-center px-4">' +
-              '<div class="size-20 flex items-center justify-center rounded-full bg-gray-100 text-gray-400 mb-4">' +
-                '<svg class="size-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>' +
-              '</div>' +
-              '<h3 class="text-lg font-bold text-gray-900 mb-1">Your cart is empty</h3>' +
-              '<p class="text-sm text-gray-500 max-w-xs mb-6">Looks like you haven\'t added any items to your cart yet.</p>' +
-              '<a href="top-banner-with-1-col.html" class="inline-flex items-center justify-center rounded-lg bg-primary-main hover:bg-primary-main-dark text-white px-5 py-2.5 text-sm font-semibold transition shadow-sm">' +
-                'Start Shopping' +
-              '</a>' +
-            '</div>';
-        } else {
-          let itemsHtml = '<div class="space-y-4">';
-          this.cart.forEach(item => {
-            const id = String(item.id || item.itemId);
-            const name = item.name || 'Product Item';
-            const price = this.formatPrice(item.price || 0);
-            const img = item.image || 'src/images/home-1/best-selling-tabs/product-1.webp';
-            const qty = Number(item.qty) || 1;
-
-            itemsHtml +=
-              '<div class="flex items-center gap-3 rounded-xl border border-gray-200 bg-white p-3 shadow-xs hover:border-gray-300 transition" id="drawer-item-' + id + '">' +
-                '<a href="product-details-6.html?id=' + encodeURIComponent(id) + '" class="size-16 shrink-0 overflow-hidden rounded-lg bg-gray-50 p-1 flex items-center justify-center border border-gray-100">' +
-                  '<img src="' + img + '" alt="' + name + '" class="size-full object-contain" onerror="this.onerror=null;this.src=\'src/images/home-1/best-selling-tabs/product-1.webp\';" />' +
+        if (scrollContainer) {
+          if (this.cart.length === 0) {
+            scrollContainer.innerHTML =
+              '<div class="flex flex-col items-center justify-center py-16 text-center px-4">' +
+                '<div class="size-20 flex items-center justify-center rounded-full bg-gray-100 text-gray-400 mb-4 mx-auto">' +
+                  '<svg class="size-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>' +
+                '</div>' +
+                '<h3 class="text-lg font-bold text-gray-900 mb-1 font-tiktok-sans">Your Cart is Empty</h3>' +
+                '<p class="text-sm text-gray-500 max-w-xs mb-6 mx-auto">Looks like you haven\'t added any items to your cart yet.</p>' +
+                '<a href="top-banner-with-1-col.html" class="inline-flex items-center justify-center rounded-xl bg-primary-main hover:bg-primary-main-dark text-white px-6 py-3 text-sm font-semibold transition shadow-md active:scale-95 mx-auto">' +
+                  'Start Shopping' +
                 '</a>' +
-                '<div class="flex-1 min-w-0 space-y-1">' +
-                  '<h4 class="text-sm font-semibold text-gray-900 truncate hover:text-primary-main transition">' +
-                    '<a href="product-details-6.html?id=' + encodeURIComponent(id) + '">' + name + '</a>' +
-                  '</h4>' +
-                  '<div class="flex items-center justify-between">' +
-                    '<span class="text-sm font-bold text-primary-main">' + price + '</span>' +
-                    '<div class="flex items-center border border-gray-200 rounded-lg bg-gray-50 px-1.5 py-0.5 gap-2">' +
-                      '<button type="button" onclick="window.CartAPI.updateQty(\'' + id + '\', ' + (qty - 1) + ')" class="size-5 flex items-center justify-center text-gray-600 hover:text-gray-900 font-bold text-sm cursor-pointer">-</button>' +
-                      '<span class="text-xs font-bold text-gray-800">' + qty + '</span>' +
-                      '<button type="button" onclick="window.CartAPI.updateQty(\'' + id + '\', ' + (qty + 1) + ')" class="size-5 flex items-center justify-center text-gray-600 hover:text-gray-900 font-bold text-sm cursor-pointer">+</button>' +
+              '</div>';
+          } else {
+            let itemsHtml = '<div class="space-y-4">';
+            this.cart.forEach(item => {
+              const id = String(item.id || item.itemId);
+              const name = item.name || 'Product Item';
+              const priceVal = typeof item.price === 'number' ? item.price : parseFloat(item.price) || 0;
+              const price = this.formatPrice(priceVal);
+              const img = item.image || 'src/images/home-1/best-selling-tabs/product-1.webp';
+              const qty = Number(item.qty) || 1;
+              const itemSubtotal = this.formatPrice(priceVal * qty);
+
+              itemsHtml +=
+                '<div class="flex items-center gap-3.5 rounded-xl border border-gray-200 bg-white p-3.5 shadow-xs hover:border-gray-300 transition" id="drawer-item-' + id + '">' +
+                  '<a href="product-details-6.html?id=' + encodeURIComponent(id) + '" class="size-18 shrink-0 overflow-hidden rounded-xl bg-gray-50 p-1 flex items-center justify-center border border-gray-100 hover:opacity-90 transition">' +
+                    '<img src="' + img + '" alt="' + name + '" class="size-full object-contain" onerror="this.onerror=null;this.src=\'src/images/home-1/best-selling-tabs/product-1.webp\';" />' +
+                  '</a>' +
+                  '<div class="flex-1 min-w-0 space-y-1.5">' +
+                    '<h4 class="text-sm font-semibold text-gray-900 truncate hover:text-primary-main transition">' +
+                      '<a href="product-details-6.html?id=' + encodeURIComponent(id) + '">' + name + '</a>' +
+                    '</h4>' +
+                    '<div class="flex items-center justify-between gap-2">' +
+                      '<div>' +
+                        '<span class="text-sm font-bold text-primary-main">' + price + '</span>' +
+                        (qty > 1 ? '<span class="text-xs text-gray-400 ml-1.5">(' + itemSubtotal + ')</span>' : '') +
+                      '</div>' +
+                      '<div class="flex items-center border border-gray-300 rounded-lg bg-gray-50 px-2 py-0.5 gap-2.5">' +
+                        '<button type="button" onclick="window.CartAPI.updateQty(\'' + id + '\', ' + (qty - 1) + ')" class="size-5 flex items-center justify-center text-gray-600 hover:text-gray-900 font-bold text-sm cursor-pointer">-</button>' +
+                        '<span class="text-xs font-bold text-gray-900 min-w-[14px] text-center">' + qty + '</span>' +
+                        '<button type="button" onclick="window.CartAPI.updateQty(\'' + id + '\', ' + (qty + 1) + ')" class="size-5 flex items-center justify-center text-gray-600 hover:text-gray-900 font-bold text-sm cursor-pointer">+</button>' +
+                      '</div>' +
                     '</div>' +
                   '</div>' +
-                '</div>' +
-                '<button type="button" onclick="window.CartAPI.removeFromCart(\'' + id + '\')" title="Remove item" class="text-gray-400 hover:text-red-500 p-1 rounded-md transition cursor-pointer">' +
-                  '<svg class="size-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>' +
-                '</button>' +
-              '</div>';
+                  '<button type="button" onclick="window.CartAPI.removeFromCart(\'' + id + '\')" title="Remove item" class="text-gray-400 hover:text-red-500 hover:bg-red-50 p-1.5 rounded-lg transition cursor-pointer">' +
+                    '<svg class="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>' +
+                  '</button>' +
+                '</div>';
+            });
+            itemsHtml += '</div>';
+            scrollContainer.innerHTML = itemsHtml;
+          }
+        }
+
+        // 3. Update Subtotal amount in Drawer Footer
+        panel.querySelectorAll('.shrink-0.border-t, .shrink-0.border-gray-300, .border-t').forEach(footer => {
+          const subtotalLabels = Array.from(footer.querySelectorAll('span')).filter(s => {
+            const t = s.textContent.toLowerCase();
+            return t.includes('sub total') || t.includes('subtotal') || t.includes('total');
           });
-          itemsHtml += '</div>';
 
-          scrollContainer.innerHTML = itemsHtml;
-        }
-
-        // Update drawer footer subtotal and links
-        const footerTotal = panel.querySelector('.border-gray-tertiary\\/24.shrink-0 .text-xl.font-bold, .shrink-0 span.text-xl');
-        if (footerTotal) {
-          footerTotal.textContent = totalFormatted;
-        }
+          subtotalLabels.forEach(lbl => {
+            if (lbl.parentElement) {
+              const amountSpan = lbl.parentElement.querySelector('span:last-child');
+              if (amountSpan && amountSpan !== lbl) {
+                amountSpan.textContent = totalFormatted;
+              }
+            }
+          });
+        });
       });
     },
 
@@ -606,31 +642,31 @@
     },
 
     /**
-     * Show UI Toast notification
+     * Show prominent Success Alert / Toast notification
      */
     showToast(message) {
-      if (window.ProductAPI && typeof window.ProductAPI.showToast === 'function') {
-        window.ProductAPI.showToast(message);
-        return;
-      }
-
-      let toast = document.getElementById('wisetrack-toast');
+      let toast = document.getElementById('wisetrack-cart-toast');
       if (!toast) {
         toast = document.createElement('div');
-        toast.id = 'wisetrack-toast';
-        toast.className = 'fixed bottom-5 right-5 z-[99999] bg-gray-900 text-white px-4 py-3 rounded-xl shadow-2xl text-sm font-medium transition-all duration-300 translate-y-20 opacity-0 flex items-center gap-2';
+        toast.id = 'wisetrack-cart-toast';
+        toast.className = 'fixed top-6 right-6 z-[999999] flex items-center gap-3 bg-gray-900 text-white px-5 py-3.5 rounded-2xl shadow-2xl text-sm font-semibold transition-all duration-300 transform -translate-y-8 opacity-0 border border-gray-700/50 backdrop-blur-md';
         document.body.appendChild(toast);
       }
 
-      toast.innerHTML = '<svg class="size-5 text-emerald-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>' +
-        '<span>' + message + '</span>';
-      toast.classList.remove('translate-y-20', 'opacity-0');
+      toast.innerHTML =
+        '<div class="size-7 flex items-center justify-center rounded-full bg-emerald-500 text-white shrink-0 shadow-sm">' +
+          '<svg class="size-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>' +
+        '</div>' +
+        '<span class="text-sm font-medium tracking-wide">' + message + '</span>';
+
+      toast.classList.remove('-translate-y-8', 'opacity-0', 'pointer-events-none');
       toast.classList.add('translate-y-0', 'opacity-100');
 
-      setTimeout(() => {
-        toast.classList.add('translate-y-20', 'opacity-0');
+      if (this.toastTimeout) clearTimeout(this.toastTimeout);
+      this.toastTimeout = setTimeout(() => {
         toast.classList.remove('translate-y-0', 'opacity-100');
-      }, 3000);
+        toast.classList.add('-translate-y-8', 'opacity-0', 'pointer-events-none');
+      }, 3200);
     }
   };
 

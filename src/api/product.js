@@ -1027,7 +1027,12 @@
     },
 
     showToast(message) {
-      let toast = document.getElementById('wisetrack-toast');
+      if (window.CartAPI && typeof window.CartAPI.showToast === 'function') {
+        window.CartAPI.showToast(message);
+        return;
+      }
+
+      let toast = document.getElementById('wisetrack-cart-toast') || document.getElementById('wisetrack-toast');
       if (!toast) {
         toast = document.createElement('div');
         toast.id = 'wisetrack-toast';
