@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="en">
   
 <!-- Mirrored from storly.riveuptheme.com/user-dashboard.html by HTTrack Website Copier/3.x [XR&CO'2014], Fri, 14 Aug 2026 08:12:41 GMT -->
@@ -5750,10 +5750,12 @@
               Cancel
             </button>
             <button
-              type="submit"
-              class="bg-primary-main hover:bg-primary-main-dark text-success-light h-12 rounded-lg px-10 py-3 text-base font-medium transition-all duration-200"
+              id="dashboard-save-address-btn"
+              onclick="window.AddressAPI ? window.AddressAPI.saveAddressFromDashboardForm() : null"
+              type="button"
+              class="bg-primary-main hover:bg-primary-main-dark text-white h-12 rounded-lg px-10 py-3 text-base font-semibold transition-all duration-200 shadow-md hover:shadow-lg active:scale-95 cursor-pointer"
             >
-              Save
+              Save Address
             </button>
           </div>
         </div>
@@ -7885,8 +7887,10 @@
 <script defer src="src/api/product.js"></script>
   <script defer src="src/api/cart.js"></script>
   <script defer src="src/api/wishlist.js"></script>
+  <script defer src="src/api/address.js"></script>
   <script defer src="src/api/checkout.js"></script>
-  <script defer src="src/api/orders.js"></script></body>
+  <script defer src="src/api/orders.js"></script>
+  <script defer src="src/api/payment.js"></script></body>
 
 <!-- Mirrored from storly.riveuptheme.com/user-dashboard.html by HTTrack Website Copier/3.x [XR&CO'2014], Fri, 14 Aug 2026 08:12:49 GMT -->
 </html>

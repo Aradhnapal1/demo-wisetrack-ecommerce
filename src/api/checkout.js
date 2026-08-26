@@ -117,7 +117,12 @@
         return;
       }
 
-      // 2. Gather form values from page
+      // 2. Gather customer details (Active Selected Address from radio button)
+      let selectedAddr = null;
+      if (window.AddressAPI && typeof window.AddressAPI.getSelectedAddress === 'function') {
+        selectedAddr = window.AddressAPI.getSelectedAddress();
+      }
+
       const firstNameInput = document.getElementById('first_name');
       const lastNameInput = document.getElementById('last_name');
       const emailInput = document.getElementById('email');
@@ -126,33 +131,32 @@
       const zipInput = document.getElementById('zip');
       const addressInput = document.getElementById('apartments') || document.getElementById('address');
 
-      let firstName = firstNameInput ? firstNameInput.value.trim() : '';
-      let lastName = lastNameInput ? lastNameInput.value.trim() : '';
       let email = emailInput && emailInput.value.trim().includes('@') ? emailInput.value.trim() : this.getUserEmail();
-      let phone = phoneInput ? phoneInput.value.trim() : '';
-      let city = cityInput ? cityInput.value.trim() : '';
-      let zip = zipInput ? zipInput.value.trim() : '';
-      let address = addressInput ? addressInput.value.trim() : '';
+      let fullName = '';
+      let phone = '';
+      let address = '';
+      let city = '';
+      let zip = '';
+      let state = 'DL';
 
-      // Try reading user profile if inputs are blank
-      try {
-        const storedUser = JSON.parse(localStorage.getItem('user') || localStorage.getItem('auth_user') || '{}');
-        if (!firstName && storedUser.name) firstName = storedUser.name;
-        if (!phone && storedUser.phone) phone = storedUser.phone;
-        if (!address && storedUser.address) address = storedUser.address;
-        if (!city && storedUser.city) city = storedUser.city;
-      } catch (e) {}
-
-      // Fallback sensible defaults for smooth API completion
-      if (!firstName) firstName = 'Priya';
-      if (!lastName) lastName = 'Sharma';
-      const fullName = (firstName + ' ' + lastName).trim() || 'Shopper';
-      if (!phone) phone = '9876543210';
-      if (!address) address = '123 MG Road, Suite 100';
-      if (!city) city = 'Mumbai';
-      if (!zip) zip = '400001';
-      const state = 'Maharashtra';
-      const country = 'India';
+      // If a saved address is selected via radio button, prioritize its exact values
+      if (selectedAddr && selectedAddr.id !== 'new_custom_address' && selectedAddr.id !== 'custom-entry') {
+        fullName = selectedAddr.name || 'Shopper';
+        phone = selectedAddr.phone || '9999999999';
+        address = selectedAddr.line || selectedAddr.address || '12 Nehru Place';
+        city = selectedAddr.city || 'New Delhi';
+        zip = selectedAddr.pincode || selectedAddr.zip || '110001';
+        state = selectedAddr.state || 'DL';
+      } else {
+        // Custom manual entry from input fields
+        const fName = firstNameInput ? firstNameInput.value.trim() : '';
+        const lName = lastNameInput ? lastNameInput.value.trim() : '';
+        fullName = (fName + (lName ? (' ' + lName) : '')).trim() || 'Shopper';
+        phone = phoneInput && phoneInput.value.trim() ? phoneInput.value.trim() : '9999999999';
+        address = addressInput && addressInput.value.trim() ? addressInput.value.trim() : '12 Nehru Place';
+        city = cityInput && cityInput.value.trim() ? cityInput.value.trim() : 'New Delhi';
+        zip = zipInput && zipInput.value.trim() ? zipInput.value.trim() : '110001';
+      }
 
       // 3. Build Lines Array
       const lines = cart.map(item => ({
@@ -170,19 +174,33 @@
         });
       };
 
+      // Detect selected payment method in DOM
+      let paymentMethod = 'cod';
+      const checkedRadio = document.querySelector('input[name="payment-method"]:checked');
+      if (checkedRadio && checkedRadio.value) {
+        paymentMethod = checkedRadio.value;
+      } else {
+        const alpineEl = document.querySelector('[x-data*="activeMethod"]');
+        if (alpineEl && alpineEl._x_dataStack && alpineEl._x_dataStack[0].activeMethod) {
+          paymentMethod = alpineEl._x_dataStack[0].activeMethod;
+        }
+      }
+
+      const customerPayload = {
+        name: fullName,
+        email: email,
+        phone: phone,
+        address: address,
+        city: city,
+        state: state,
+        pincode: zip
+      };
+
       // 4. Construct Full Payload matching exact schema
       const payload = {
         lines: lines,
-        customer: {
-          name: fullName,
-          email: email,
-          phone: phone,
-          address: address,
-          city: city,
-          state: state,
-          pincode: zip
-        },
-        paymentMethod: 'cod',
+        customer: customerPayload,
+        paymentMethod: paymentMethod,
         idempotencyKey: generateUUID(),
         shippingRateId: 'standard',
         ...(customData || {})
@@ -213,6 +231,11 @@
         const data = await response.json();
 
         if (response.ok && (data.status === 'confirmed' || data.status === 'paid' || data.id || data.orderRef)) {
+          // Attach customer and lines to returned order object for complete invoice rendering
+          data.customer = customerPayload;
+          data.paymentMethod = payload.paymentMethod;
+          data.lines = payload.lines;
+
           // Success! Clear Cart
           if (window.CartAPI) {
             window.CartAPI.clearCart();
@@ -258,7 +281,7 @@
         this.isSubmitting = false;
         if (submitBtn) {
           submitBtn.disabled = false;
-          submitBtn.innerHTML = origBtnText || 'Proceed to checkout';
+          submitBtn.innerHTML = origBtnText || 'Place Order';
         }
       }
     },
@@ -348,30 +371,7 @@
         totalSpan.textContent = formattedTotal;
       }
 
-      // 3. Pre-fill form values from localStorage
-      try {
-        const user = JSON.parse(localStorage.getItem('user') || localStorage.getItem('auth_user') || '{}');
-        const email = localStorage.getItem('user_email') || localStorage.getItem('email') || user.email;
-        if (email) {
-          const emailInput = document.getElementById('email');
-          if (emailInput && !emailInput.value) emailInput.value = email;
-        }
-        if (user.name) {
-          const parts = user.name.split(' ');
-          const first = parts[0] || '';
-          const last = parts.slice(1).join(' ') || '';
-          const fInput = document.getElementById('first_name');
-          const lInput = document.getElementById('last_name');
-          if (fInput && !fInput.value) fInput.value = first;
-          if (lInput && !lInput.value) lInput.value = last;
-        }
-        if (user.phone) {
-          const pInput = document.getElementById('phone');
-          if (pInput && !pInput.value) pInput.value = user.phone;
-        }
-      } catch (e) {}
-
-      // 4. Attach Checkout Button Click Handler
+      // 3. Attach Checkout Button Click Handler
       const checkoutButtons = document.querySelectorAll('button:has(+ *), .xl\\:col-span-4 button, [data-checkout-btn]');
       checkoutButtons.forEach(btn => {
         const text = btn.textContent.toLowerCase();
@@ -385,7 +385,7 @@
     },
 
     /**
-     * Show Beautiful Order Confirmation Modal
+     * Show Beautiful Order Confirmation Modal with Deliver To details
      */
     showOrderSuccessModal(orderData) {
       let modal = document.getElementById('wisetrack-order-modal');
@@ -398,6 +398,12 @@
       const orderRef = orderData.orderRef || orderData.id || 'CONFIRMED';
       const totalAmount = (window.CartAPI ? window.CartAPI.formatPrice(orderData.total || orderData.amountDue || 0) : ('₹' + (orderData.total || 0)));
       const invoiceUrl = orderData.invoicePdfUrl ? (this.baseUrl + orderData.invoicePdfUrl) : null;
+
+      let deliverTo = '';
+      if (orderData.customer) {
+        const addrText = (orderData.customer.address || orderData.customer.line || '') + (orderData.customer.city ? (', ' + orderData.customer.city) : '');
+        deliverTo = (orderData.customer.name || '') + (addrText ? (' (' + addrText + ')') : '');
+      }
 
       modal.innerHTML =
         '<div class="relative w-full max-w-lg overflow-hidden rounded-3xl bg-white p-8 shadow-2xl transition-all transform scale-100 border border-gray-100 text-center space-y-6">' +
@@ -420,6 +426,11 @@
               '<span class="text-gray-500">Order Reference:</span>' +
               '<span class="font-bold text-gray-900 font-mono tracking-wide text-xs sm:text-sm">' + orderRef + '</span>' +
             '</div>' +
+            (deliverTo ?
+              '<div class="flex items-center justify-between pb-2 border-b border-gray-200">' +
+                '<span class="text-gray-500">Deliver To:</span>' +
+                '<span class="font-medium text-gray-900 text-xs sm:text-sm truncate max-w-[240px]">' + deliverTo + '</span>' +
+              '</div>' : '') +
             '<div class="flex items-center justify-between pb-2 border-b border-gray-200">' +
               '<span class="text-gray-500">Order Status:</span>' +
               '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">' +
@@ -433,11 +444,10 @@
           '</div>' +
           '<!-- Action Buttons -->' +
           '<div class="flex flex-col sm:flex-row items-center gap-3 pt-2">' +
-            (invoiceUrl ?
-              '<a href="' + invoiceUrl + '" target="_blank" class="w-full sm:flex-1 inline-flex items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 px-5 py-3 text-sm font-semibold transition shadow-sm">' +
-                '<svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>' +
-                '<span>Download Invoice</span>' +
-              '</a>' : '') +
+            '<button type="button" onclick="window.downloadInvoice ? window.downloadInvoice(\'' + (invoiceUrl || '') + '\', \'' + orderRef + '\') : null;" class="w-full sm:flex-1 inline-flex items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 px-5 py-3 text-sm font-semibold transition shadow-sm cursor-pointer">' +
+              '<svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>' +
+              '<span>Download Invoice</span>' +
+            '</button>' +
             '<a href="top-banner-with-1-col.html" class="w-full sm:flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-primary-main hover:bg-primary-main-dark text-white px-5 py-3 text-sm font-semibold transition shadow-md hover:shadow-lg active:scale-95">' +
               '<svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>' +
               '<span>Continue Shopping</span>' +

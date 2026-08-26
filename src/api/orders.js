@@ -3,6 +3,7 @@
  * WiseTrack E-Commerce - Orders & Tracking API Manager
  * File: src/api/orders.js
  * API Endpoints:
+ *   - GET  /api/shopper/orders
  *   - POST /api/orders/lookup
  *   - GET  /api/orders/{id}
  * ============================================================================
@@ -13,6 +14,7 @@
 
   // API Configuration
   const API_CONFIG = {
+    SHOPPER_ORDERS_URL: 'https://demo.wisetracktechnologies.com/api/shopper/orders',
     LOOKUP_URL: 'https://demo.wisetracktechnologies.com/api/orders/lookup',
     ORDER_URL: 'https://demo.wisetracktechnologies.com/api/orders/',
     BASE_URL: 'https://demo.wisetracktechnologies.com',
@@ -26,6 +28,7 @@
    * Orders API Controller
    */
   const OrdersAPI = {
+    shopperOrdersUrl: API_CONFIG.SHOPPER_ORDERS_URL,
     lookupUrl: API_CONFIG.LOOKUP_URL,
     orderUrl: API_CONFIG.ORDER_URL,
     baseUrl: API_CONFIG.BASE_URL,
@@ -89,9 +92,12 @@
     /**
      * Initialize Orders Service
      */
-    init() {
+    async init() {
       this.loadFromCache();
       this.renderOrdersInDashboard();
+
+      // Fetch live shopper orders
+      await this.fetchShopperOrders();
 
       // Listen for new orders placed
       window.addEventListener('order:placed', (e) => {
@@ -100,6 +106,8 @@
           this.renderOrdersInDashboard();
         }
       });
+
+      window.addEventListener('auth:login', () => this.fetchShopperOrders());
     },
 
     /**
@@ -135,6 +143,30 @@
       try {
         localStorage.setItem(API_CONFIG.ORDERS_CACHE_KEY, JSON.stringify(this.orders));
       } catch (e) {}
+    },
+
+    /**
+     * Fetch Shopper Orders from GET /api/shopper/orders
+     */
+    async fetchShopperOrders() {
+      try {
+        const response = await fetch(this.shopperOrdersUrl, {
+          method: 'GET',
+          headers: this.getHeaders()
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (Array.isArray(data) && data.length > 0) {
+            // Merge with local orders
+            data.forEach(order => this.saveOrderToHistory(order));
+            this.renderOrdersInDashboard();
+          }
+        }
+      } catch (e) {
+        console.warn('[OrdersAPI] Shopper orders notice (using cache):', e.message);
+      }
+      return this.orders;
     },
 
     /**
@@ -308,10 +340,10 @@
                     '<span>Track Package</span>' +
                   '</a>' : '') +
                 (invoiceUrl ?
-                  '<a href="' + invoiceUrl + '" target="_blank" class="inline-flex items-center gap-1 text-xs font-semibold text-gray-700 hover:text-primary-main px-3 py-1.5 rounded-lg border border-gray-200 hover:border-primary-main transition">' +
+                  '<button type="button" onclick="window.downloadInvoice ? window.downloadInvoice(\'' + invoiceUrl + '\', \'' + orderRef + '\') : window.open(\'' + invoiceUrl + '\', \'_blank\');" class="inline-flex items-center gap-1 text-xs font-semibold text-gray-700 hover:text-primary-main px-3 py-1.5 rounded-lg border border-gray-200 hover:border-primary-main transition cursor-pointer">' +
                     '<svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>' +
-                    '<span>Invoice PDF</span>' +
-                  '</a>' : '') +
+                    '<span>Download Invoice</span>' +
+                  '</button>' : '') +
               '</div>' +
             '</div>' +
           '</div>';
