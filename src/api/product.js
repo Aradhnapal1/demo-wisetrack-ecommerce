@@ -588,61 +588,93 @@
       // List View Containers
       const listContainers = document.querySelectorAll('#product-list-container, div[x-show*="list"] .space-y-6');
       listContainers.forEach(container => {
-        if (products.length === 0) return;
+        if (products.length === 0) {
+          container.innerHTML = '<div class="py-16 text-center">' +
+            '<div class="inline-flex size-16 items-center justify-center rounded-full bg-gray-100 text-gray-400 mb-4">' +
+              '<svg class="size-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>' +
+            '</div>' +
+            '<h3 class="text-lg font-bold text-gray-800">No products found</h3>' +
+            '<p class="text-sm text-gray-500 mt-1">Try selecting another category or clearing search filters.</p>' +
+          '</div>';
+          return;
+        }
+
         let html = '';
         products.forEach(p => {
-          const id = p.id;
-          const name = p.name || 'Product';
-          const category = p.category || 'General';
-          const desc = p.description ? p.description.slice(0, 140) + '...' : 'Pure, premium quality product from WiseTrack catalog.';
-          const price = this.formatPrice(p.price || 0);
-          const mrp = p.mrp && p.mrp > p.price ? this.formatPrice(p.mrp) : '';
-          const img = this.getImageUrl(p, 0);
-          const unit = p.unit ? ('<span class="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded font-normal">' + p.unit + '</span>') : '';
-          const discount = p.mrp && p.mrp > p.price ? Math.round(((p.mrp - p.price) / p.mrp) * 100) : 15;
-
-          html += '<article class="flex flex-col sm:flex-row gap-5 rounded-xl border border-gray-200 bg-white p-4 transition-all duration-300 hover:shadow-lg hover:border-primary-main group items-center justify-between">' +
-            '<div class="flex flex-col sm:flex-row gap-4 items-center flex-1 min-w-0 w-full">' +
-              '<div class="relative overflow-hidden rounded-xl bg-gray-50 flex items-center justify-center size-36 shrink-0 p-2">' +
-                '<a href="product-details-6.html?id=' + encodeURIComponent(id) + '" class="block size-full flex items-center justify-center">' +
-                  '<img src="' + img + '" alt="' + name + '" loading="lazy" class="max-h-28 max-w-full object-contain transition-transform duration-300 group-hover:scale-105" onerror="this.onerror=null;this.src=\'src/images/home-1/best-selling-tabs/product-1.webp\';" />' +
-                '</a>' +
-                '<span class="absolute top-1.5 left-1.5 text-[10px] font-bold bg-red-500 text-white px-1.5 py-0.5 rounded">' + discount + '% OFF</span>' +
-              '</div>' +
-              '<div class="flex flex-col justify-between flex-1 min-w-0 space-y-1.5">' +
-                '<div class="flex items-center gap-2">' +
-                  '<span class="text-xs font-semibold text-primary-main">' + category + '</span>' +
-                  unit +
-                '</div>' +
-                '<h3 class="text-base sm:text-lg font-semibold text-gray-900 hover:text-primary-main line-clamp-2 leading-snug">' +
-                  '<a href="product-details-6.html?id=' + encodeURIComponent(id) + '">' + name + '</a>' +
-                '</h3>' +
-                '<p class="text-xs text-gray-500 line-clamp-2">' + desc + '</p>' +
-                '<div class="flex items-center gap-1 text-amber-400 text-xs">' +
-                  '<span>★★★★★</span>' +
-                  '<span class="text-gray-400 text-xs">(4.8 / 5)</span>' +
-                '</div>' +
-              '</div>' +
-            '</div>' +
-            '<div class="flex sm:flex-col items-center sm:items-end justify-between w-full sm:w-auto gap-4 border-t sm:border-t-0 pt-3 sm:pt-0 sm:pl-4 sm:border-l border-gray-100 shrink-0">' +
-              '<div class="flex flex-col sm:items-end">' +
-                '<span class="text-xl font-bold text-gray-900">' + price + '</span>' +
-                (mrp ? ('<span class="text-xs text-gray-400 line-through">' + mrp + '</span>') : '') +
-              '</div>' +
-              '<div class="flex items-center gap-2">' +
-                '<button type="button" onclick="window.ProductAPI.toggleWishlist(\'' + id + '\')" class="flex size-9 items-center justify-center rounded-lg border border-gray-200 text-gray-600 hover:text-red-500 hover:border-red-500 transition-colors">' +
-                  '<svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>' +
-                '</button>' +
-                '<button type="button" onclick="window.ProductAPI.addToCart(\'' + id + '\')" class="bg-primary-main hover:bg-primary-main-dark text-white text-sm font-semibold px-4 py-2 rounded-lg flex items-center gap-2 transition-all shadow-sm active:scale-95">' +
-                  '<svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>' +
-                  '<span>Add to Cart</span>' +
-                '</button>' +
-              '</div>' +
-            '</div>' +
-          '</article>';
+          html += this.generateProductListCardHtml(p);
         });
         container.innerHTML = html;
       });
+    },
+
+    /**
+     * Modern Compact Horizontal Product List Card Generator
+     */
+    generateProductListCardHtml(product) {
+      if (!product) return '';
+      const id = product.id;
+      const name = product.name || 'Product';
+      const category = product.category || 'General';
+      const desc = product.description ? (product.description.length > 120 ? product.description.slice(0, 120) + '...' : product.description) : 'Pure, premium quality product from WiseTrack catalog.';
+      const priceVal = typeof product.price === 'number' ? product.price : parseFloat(product.price) || 0;
+      const price = this.formatPrice(priceVal);
+      const mrpVal = typeof product.mrp === 'number' ? product.mrp : parseFloat(product.mrp) || 0;
+      const mrp = mrpVal > priceVal ? this.formatPrice(mrpVal) : '';
+      const savings = mrpVal > priceVal ? this.formatPrice(mrpVal - priceVal) : '';
+      const img = this.getImageUrl(product, 0);
+      const unit = product.unit ? ('<span class="inline-flex items-center text-[11px] text-gray-500 bg-gray-100 px-2 py-0.5 rounded font-medium">' + product.unit + '</span>') : '';
+      const discount = mrpVal > priceVal ? Math.round(((mrpVal - priceVal) / mrpVal) * 100) : 15;
+
+      return '<article class="flex flex-col sm:flex-row gap-4 rounded-xl border border-gray-200 bg-white p-3.5 transition-all duration-300 hover:shadow-md hover:border-primary-main group items-center">' +
+        '<!-- Left Image Area -->' +
+        '<div class="relative shrink-0 overflow-hidden rounded-lg bg-gray-50 flex items-center justify-center size-28 sm:size-32 p-2 border border-gray-100">' +
+          '<a href="product-details-6.html?id=' + encodeURIComponent(id) + '" class="block size-full flex items-center justify-center">' +
+            '<img src="' + img + '" alt="' + name + '" loading="lazy" class="max-h-24 max-w-full object-contain transition-transform duration-300 group-hover:scale-105" onerror="this.onerror=null;this.src=\'src/images/home-1/best-selling-tabs/product-1.webp\';" />' +
+          '</a>' +
+          '<div class="absolute top-1.5 left-1.5 inline-flex items-center px-1.5 py-0.5 rounded bg-red-500 text-white text-[10px] font-bold uppercase shadow-xs">' +
+            discount + '% OFF' +
+          '</div>' +
+        '</div>' +
+        '<!-- Middle & Right Content Area -->' +
+        '<div class="flex flex-1 flex-col justify-between gap-2 min-w-0 w-full">' +
+          '<!-- Details -->' +
+          '<div class="space-y-1">' +
+            '<div class="flex items-center justify-between gap-2">' +
+              '<span class="text-[11px] font-bold text-primary-main uppercase tracking-wider">' + category + '</span>' +
+              unit +
+            '</div>' +
+            '<h3 class="text-sm sm:text-base font-bold text-gray-900 hover:text-primary-main transition line-clamp-1 leading-snug">' +
+              '<a href="product-details-6.html?id=' + encodeURIComponent(id) + '">' + name + '</a>' +
+            '</h3>' +
+            '<p class="text-xs text-gray-500 line-clamp-1 leading-normal">' + desc + '</p>' +
+            '<!-- Ratings -->' +
+            '<div class="flex items-center gap-1.5 pt-0.5">' +
+              '<div class="flex items-center text-amber-400 text-xs">' +
+                '<span>★</span><span>★</span><span>★</span><span>★</span><span>★</span>' +
+              '</div>' +
+              '<span class="text-xs font-semibold text-gray-800">4.8</span>' +
+              '<span class="text-xs text-gray-400 font-medium">(189 reviews)</span>' +
+            '</div>' +
+          '</div>' +
+          '<!-- Bottom Pricing & Action Bar -->' +
+          '<div class="flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 pt-2.5 mt-auto">' +
+            '<div class="flex items-baseline gap-2">' +
+              '<span class="text-lg font-bold text-gray-900 font-tiktok-sans">' + price + '</span>' +
+              (mrp ? ('<span class="text-xs text-gray-400 line-through">' + mrp + '</span>') : '') +
+              (savings ? ('<span class="text-[11px] font-semibold text-emerald-600">(' + savings + ' off)</span>') : '') +
+            '</div>' +
+            '<div class="flex items-center gap-2">' +
+              '<button type="button" onclick="window.ProductAPI.toggleWishlist(\'' + id + '\')" class="flex size-8.5 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 hover:text-red-500 hover:border-red-500 hover:bg-red-50 transition cursor-pointer shadow-xs">' +
+                '<svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>' +
+              '</button>' +
+              '<button type="button" onclick="window.ProductAPI.addToCart(\'' + id + '\')" class="inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary-main hover:bg-primary-main-dark text-white px-4 py-1.5 text-xs sm:text-sm font-semibold transition-all shadow-sm hover:shadow active:scale-95 cursor-pointer">' +
+                '<svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>' +
+                '<span>Add to Cart</span>' +
+              '</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+      '</article>';
     },
 
     /**
