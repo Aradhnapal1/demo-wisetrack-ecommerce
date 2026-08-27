@@ -141,21 +141,21 @@
 
       // If a saved address is selected via radio button, prioritize its exact values
       if (selectedAddr && selectedAddr.id !== 'new_custom_address' && selectedAddr.id !== 'custom-entry') {
-        fullName = selectedAddr.name || 'Shopper';
-        phone = selectedAddr.phone || '9999999999';
-        address = selectedAddr.line || selectedAddr.address || '12 Nehru Place';
-        city = selectedAddr.city || 'New Delhi';
-        zip = selectedAddr.pincode || selectedAddr.zip || '110001';
+        fullName = selectedAddr.name || '';
+        phone = selectedAddr.phone || '';
+        address = selectedAddr.line || selectedAddr.address || '';
+        city = selectedAddr.city || '';
+        zip = selectedAddr.pincode || selectedAddr.zip || '';
         state = selectedAddr.state || 'DL';
       } else {
         // Custom manual entry from input fields
         const fName = firstNameInput ? firstNameInput.value.trim() : '';
         const lName = lastNameInput ? lastNameInput.value.trim() : '';
-        fullName = (fName + (lName ? (' ' + lName) : '')).trim() || 'Shopper';
-        phone = phoneInput && phoneInput.value.trim() ? phoneInput.value.trim() : '9999999999';
-        address = addressInput && addressInput.value.trim() ? addressInput.value.trim() : '12 Nehru Place';
-        city = cityInput && cityInput.value.trim() ? cityInput.value.trim() : 'New Delhi';
-        zip = zipInput && zipInput.value.trim() ? zipInput.value.trim() : '110001';
+        fullName = (fName + (lName ? (' ' + lName) : '')).trim();
+        phone = phoneInput && phoneInput.value.trim() ? phoneInput.value.trim() : '';
+        address = addressInput && addressInput.value.trim() ? addressInput.value.trim() : '';
+        city = cityInput && cityInput.value.trim() ? cityInput.value.trim() : '';
+        zip = zipInput && zipInput.value.trim() ? zipInput.value.trim() : '';
       }
 
       // 3. Build Lines Array

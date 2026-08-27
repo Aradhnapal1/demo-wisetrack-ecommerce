@@ -80,26 +80,16 @@
         const cached = localStorage.getItem(API_CONFIG.CACHE_KEY);
         if (cached) {
           const parsed = JSON.parse(cached);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            this.addresses = parsed;
+          if (Array.isArray(parsed)) {
+            // Clean up any legacy dummy static address cards
+            this.addresses = parsed.filter(a => a && a.id !== 'default-addr-1' && a.id !== 'addr-home-1' && (a.name || '').toLowerCase() !== 'priya sharma');
+            this.saveToCache();
           }
         }
       } catch (e) {}
 
-      // If empty, create default sample addresses
-      if (!this.addresses || this.addresses.length === 0) {
-        this.addresses = [
-          {
-            id: 'addr-home-1',
-            name: 'Priya Sharma',
-            phone: '9999999999',
-            line: '12 Nehru Place',
-            city: 'New Delhi',
-            state: 'DL',
-            pincode: '110001',
-            isDefault: true
-          }
-        ];
+      if (!this.addresses) {
+        this.addresses = [];
       }
     },
 
@@ -128,7 +118,8 @@
         if (response.ok) {
           const data = await response.json();
           if (Array.isArray(data) && data.length > 0) {
-            this.addresses = data;
+            // Filter out any mock dummy addresses if needed
+            this.addresses = data.filter(a => a && a.id !== 'default-addr-1' && a.id !== 'addr-home-1' && (a.name || '').toLowerCase() !== 'priya sharma');
             this.saveToCache();
           }
         }
@@ -151,12 +142,12 @@
       if (!addressData) return null;
 
       const payload = {
-        name: addressData.name || 'Priya Sharma',
-        phone: addressData.phone || '9999999999',
-        line: addressData.line || addressData.address || '12 Nehru Place',
-        city: addressData.city || 'New Delhi',
+        name: addressData.name || '',
+        phone: addressData.phone || '',
+        line: addressData.line || addressData.address || '',
+        city: addressData.city || '',
         state: addressData.state || 'DL',
-        pincode: addressData.pincode || addressData.zip || '110001',
+        pincode: addressData.pincode || addressData.zip || '',
         makeDefault: !!addressData.makeDefault
       };
 
@@ -224,19 +215,26 @@
     saveAddressFromCheckoutForm() {
       const fName = document.getElementById('first_name') ? document.getElementById('first_name').value.trim() : '';
       const lName = document.getElementById('last_name') ? document.getElementById('last_name').value.trim() : '';
-      const fullName = (fName + (lName ? (' ' + lName) : '')).trim() || 'Priya Sharma';
-      const phone = document.getElementById('phone') ? document.getElementById('phone').value.trim() : '9999999999';
-      const city = document.getElementById('city') ? document.getElementById('city').value.trim() : 'New Delhi';
-      const zip = document.getElementById('zip') ? document.getElementById('zip').value.trim() : '110001';
-      const line = document.getElementById('apartments') ? document.getElementById('apartments').value.trim() : '12 Nehru Place';
+      const fullName = (fName + (lName ? (' ' + lName) : '')).trim();
+      const phone = document.getElementById('phone') ? document.getElementById('phone').value.trim() : '';
+      const city = document.getElementById('city') ? document.getElementById('city').value.trim() : '';
+      const zip = document.getElementById('zip') ? document.getElementById('zip').value.trim() : '';
+      const line = document.getElementById('apartments') ? document.getElementById('apartments').value.trim() : (document.getElementById('address') ? document.getElementById('address').value.trim() : '');
+
+      if (!fullName || !line || !city || !zip) {
+        if (window.CartAPI && typeof window.CartAPI.showToast === 'function') {
+          window.CartAPI.showToast('Please enter Name, Address, City, and ZIP code to save.', 'wishlist');
+        }
+        return;
+      }
 
       const data = {
         name: fullName,
-        phone: phone || '9999999999',
-        line: line || '12 Nehru Place',
-        city: city || 'New Delhi',
+        phone: phone,
+        line: line,
+        city: city,
         state: 'DL',
-        pincode: zip || '110001',
+        pincode: zip,
         makeDefault: true
       };
 
@@ -251,20 +249,27 @@
       const zipInput = document.querySelector('[x-show*="add-address"] #zip, #zip');
       const lineInput = document.querySelector('[x-show*="add-address"] #apartments, #apartments');
 
-      let userName = 'Priya Sharma';
-      let userPhone = '9999999999';
+      let userName = '';
+      let userPhone = '';
       try {
         const u = JSON.parse(localStorage.getItem('user') || localStorage.getItem('auth_user') || '{}');
         if (u.name) userName = u.name;
         if (u.phone) userPhone = u.phone;
       } catch (e) {}
 
-      const city = cityInput && cityInput.value.trim() ? cityInput.value.trim() : 'New Delhi';
-      const zip = zipInput && zipInput.value.trim() ? zipInput.value.trim() : '110001';
-      const line = lineInput && lineInput.value.trim() ? lineInput.value.trim() : '12 Nehru Place';
+      const city = cityInput && cityInput.value.trim() ? cityInput.value.trim() : '';
+      const zip = zipInput && zipInput.value.trim() ? zipInput.value.trim() : '';
+      const line = lineInput && lineInput.value.trim() ? lineInput.value.trim() : '';
+
+      if (!line || !city) {
+        if (window.CartAPI && typeof window.CartAPI.showToast === 'function') {
+          window.CartAPI.showToast('Please fill in address and city.', 'wishlist');
+        }
+        return;
+      }
 
       const data = {
-        name: userName,
+        name: userName || 'Customer',
         phone: userPhone,
         line: line,
         city: city,
@@ -321,14 +326,14 @@
         if (fInput) fInput.value = parts[0] || '';
         if (lInput) lInput.value = parts.slice(1).join(' ') || '';
       }
-      if (pInput && addr.phone) pInput.value = addr.phone;
-      if (cInput && addr.city) cInput.value = addr.city;
-      if (zInput && (addr.pincode || addr.zip)) zInput.value = addr.pincode || addr.zip;
-      if (aInput && (addr.line || addr.address)) aInput.value = addr.line || addr.address;
+      if (pInput) pInput.value = addr.phone || '';
+      if (cInput) cInput.value = addr.city || '';
+      if (zInput) zInput.value = addr.pincode || addr.zip || '';
+      if (aInput) aInput.value = addr.line || addr.address || '';
 
       this.renderCheckoutAddressSelector();
       if (triggerToast && window.CartAPI && typeof window.CartAPI.showToast === 'function') {
-        window.CartAPI.showToast('Selected: ' + (addr.name || 'Address') + ' (' + (addr.city || '') + ')', 'cart');
+        window.CartAPI.showToast('Selected address: ' + (addr.name || 'Address') + (addr.city ? (' (' + addr.city + ')') : ''), 'cart');
       }
     },
 
@@ -350,7 +355,7 @@
         addressSection.insertBefore(picker, addressSection.firstChild);
       }
 
-      if (this.addresses.length === 0) {
+      if (!this.addresses || this.addresses.length === 0) {
         picker.innerHTML = '';
         return;
       }
@@ -385,8 +390,8 @@
                 '<div class="flex items-center justify-between">' +
                   '<span class="text-sm font-bold text-gray-900 truncate">' + (addr.name || 'Saved Address') + '</span>' +
                 '</div>' +
-                '<p class="text-xs text-gray-600 line-clamp-2 leading-relaxed">' + (addr.line || addr.address || '') + ', ' + (addr.city || '') + ' - ' + (addr.pincode || addr.zip || '') + '</p>' +
-                '<p class="text-xs text-gray-500 font-medium pt-0.5">Phone: <span class="text-gray-700 font-semibold">' + (addr.phone || 'N/A') + '</span></p>' +
+                '<p class="text-xs text-gray-600 line-clamp-2 leading-relaxed">' + (addr.line || addr.address || '') + (addr.city ? (', ' + addr.city) : '') + (addr.pincode ? (' - ' + addr.pincode) : '') + '</p>' +
+                (addr.phone ? '<p class="text-xs text-gray-500 font-medium pt-0.5">Phone: <span class="text-gray-700 font-semibold">' + addr.phone + '</span></p>' : '') +
               '</div>' +
             '</div>' +
           '</label>';
@@ -459,7 +464,7 @@
       if (fullName || line || city || phone) {
         return {
           id: 'custom-entry',
-          name: fullName || 'Shopper',
+          name: fullName,
           phone: phone,
           line: line,
           address: line,
@@ -519,8 +524,8 @@
             '</div>' +
             '<div class="text-sm text-gray-600 space-y-1">' +
               '<p class="font-medium text-gray-800">' + (addr.line || addr.address || '') + '</p>' +
-              '<p>' + (addr.city || '') + ', ' + (addr.state || '') + ' - ' + (addr.pincode || addr.zip || '') + '</p>' +
-              '<p class="text-xs text-gray-500">Phone: <span class="font-medium text-gray-700">' + (addr.phone || 'N/A') + '</span></p>' +
+              '<p>' + (addr.city || '') + (addr.state ? (', ' + addr.state) : '') + (addr.pincode ? (' - ' + addr.pincode) : '') + '</p>' +
+              (addr.phone ? '<p class="text-xs text-gray-500">Phone: <span class="font-medium text-gray-700">' + addr.phone + '</span></p>' : '') +
             '</div>' +
           '</div>';
       });
@@ -533,29 +538,29 @@
             '<span>Add New Address</span>' +
           '</button>' +
         '</div>' +
-        '<div class="grid grid-cols-1 md:grid-cols-2 gap-4">' +
-          listHtml +
-        '</div>';
+        (this.addresses.length > 0 ?
+          '<div class="grid grid-cols-1 md:grid-cols-2 gap-4">' + listHtml + '</div>' :
+          '<p class="text-sm text-gray-500 py-6">No saved addresses found. Click "Add New Address" above to save one.</p>');
     },
 
     /**
      * Prompt dialog to add a new address in dashboard
      */
     promptNewAddress() {
-      const name = prompt('Enter Full Name:', 'Priya Sharma');
+      const name = prompt('Enter Full Name:');
       if (!name) return;
-      const phone = prompt('Enter Phone Number:', '9999999999');
-      const line = prompt('Enter Street Address / Line:', '12 Nehru Place');
-      const city = prompt('Enter City:', 'New Delhi');
-      const pincode = prompt('Enter Pincode:', '110001');
+      const phone = prompt('Enter Phone Number:');
+      const line = prompt('Enter Street Address / Line:');
+      const city = prompt('Enter City:');
+      const pincode = prompt('Enter Pincode:');
 
       this.saveAddress({
         name: name,
-        phone: phone || '9999999999',
-        line: line || '12 Nehru Place',
-        city: city || 'New Delhi',
+        phone: phone || '',
+        line: line || '',
+        city: city || '',
         state: 'DL',
-        pincode: pincode || '110001',
+        pincode: pincode || '',
         makeDefault: true
       });
     }
