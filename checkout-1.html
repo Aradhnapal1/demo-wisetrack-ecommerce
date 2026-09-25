@@ -11,7 +11,9 @@
     />
     <meta content="ie=edge" http-equiv="X-UA-Compatible" />
     <title>Storly - Checkout 1</title>
-  <link rel="icon" href="favicon.png"><link href="style.css" rel="stylesheet"></head>
+  <link rel="icon" href="favicon.png"><link href="style.css" rel="stylesheet">
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+</head>
   <body>
     <!-- Preloader -->
 <div 
@@ -3742,64 +3744,80 @@
                     class="space-y-4"
                     x-data="{ activeMethod: 'cod' }"
                   >
-                    <!-- Option 1: Bank Transfer -->
+                    <!-- Option 1: Bank Transfer / Razorpay Online Payment -->
                     <div
-                      :class="activeMethod === 'bank' ? 'border-primary-main bg-white' : 'border-gray-tertiary/32 hover:border-gray-400 bg-white'"
-                      @click="activeMethod = 'bank'"
+                      :class="(activeMethod === 'bank' || activeMethod === 'razorpay') ? 'border-primary-main bg-white ring-1 ring-primary-main/20' : 'border-gray-tertiary/32 hover:border-gray-400 bg-white'"
+                      @click="activeMethod = 'razorpay'"
                       class="cursor-pointer rounded-lg border p-4 transition-all duration-200"
                     >
-                      <div class="flex items-center gap-2">
-                        <div class="relative flex items-center justify-center">
-                          <input
-                            class="sr-only"
-                            name="payment-method"
-                            type="radio"
-                            value="bank"
-                            x-model="activeMethod"
-                          />
-                          <div
-                            :class="activeMethod === 'bank' ? 'border-primary-main' : 'border-action-active'"
-                            class="flex size-4 items-center justify-center rounded-full border-2 bg-white transition-all duration-200"
-                          >
+                      <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                          <div class="relative flex items-center justify-center">
+                            <input
+                              class="sr-only"
+                              name="payment-method"
+                              type="radio"
+                              value="razorpay"
+                              x-model="activeMethod"
+                            />
                             <div
-                              :class="activeMethod === 'bank' ? 'scale-100 opacity-100' : 'scale-0 opacity-0'"
-                              class="bg-primary-main size-2 rounded-full transition-all duration-200"
-                            ></div>
+                              :class="(activeMethod === 'bank' || activeMethod === 'razorpay') ? 'border-primary-main' : 'border-action-active'"
+                              class="flex size-4 items-center justify-center rounded-full border-2 bg-white transition-all duration-200"
+                            >
+                              <div
+                                :class="(activeMethod === 'bank' || activeMethod === 'razorpay') ? 'scale-100 opacity-100' : 'scale-0 opacity-0'"
+                                class="bg-primary-main size-2 rounded-full transition-all duration-200"
+                              ></div>
+                            </div>
+                          </div>
+                          <div>
+                            <span class="text-gray-primary text-base font-semibold block"
+                              >Bank Transfer / Online (Razorpay)</span
+                            >
+                            <span class="text-xs text-gray-500 block">UPI, Cards, Netbanking & Wallets</span>
                           </div>
                         </div>
-                        <span class="text-gray-primary text-base font-normal"
-                          >Bank Transfer</span
-                        >
+                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          Razorpay Secure
+                        </span>
                       </div>
                     </div>
                     <!-- Option 2: Cash On Delivery -->
                     <div
-                      :class="activeMethod === 'cod' ? 'border-primary-main bg-white' : 'border-gray-tertiary/32 hover:border-gray-400 bg-white'"
+                      :class="activeMethod === 'cod' ? 'border-primary-main bg-white ring-1 ring-primary-main/20' : 'border-gray-tertiary/32 hover:border-gray-400 bg-white'"
                       @click="activeMethod = 'cod'"
                       class="cursor-pointer rounded-lg border p-4 transition-all duration-200"
                     >
-                      <div class="flex items-center gap-2">
-                        <div class="relative flex items-center justify-center">
-                          <input
-                            class="sr-only"
-                            name="payment-method"
-                            type="radio"
-                            value="cod"
-                            x-model="activeMethod"
-                          />
-                          <div
-                            :class="activeMethod === 'cod' ? 'border-primary-main' : 'border-action-active'"
-                            class="flex size-4 items-center justify-center rounded-full border-2 bg-white transition-all duration-200"
-                          >
+                      <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                          <div class="relative flex items-center justify-center">
+                            <input
+                              class="sr-only"
+                              name="payment-method"
+                              type="radio"
+                              value="cod"
+                              x-model="activeMethod"
+                            />
                             <div
-                              :class="activeMethod === 'cod' ? 'scale-100 opacity-100' : 'scale-0 opacity-0'"
-                              class="bg-primary-main size-2 rounded-full transition-all duration-200"
-                            ></div>
+                              :class="activeMethod === 'cod' ? 'border-primary-main' : 'border-action-active'"
+                              class="flex size-4 items-center justify-center rounded-full border-2 bg-white transition-all duration-200"
+                            >
+                              <div
+                                :class="activeMethod === 'cod' ? 'scale-100 opacity-100' : 'scale-0 opacity-0'"
+                                class="bg-primary-main size-2 rounded-full transition-all duration-200"
+                              ></div>
+                            </div>
+                          </div>
+                          <div>
+                            <span class="text-gray-primary text-base font-semibold block"
+                              >Cash On Delivery</span
+                            >
+                            <span class="text-xs text-gray-500 block">Pay cash upon receiving delivery</span>
                           </div>
                         </div>
-                        <span class="text-gray-primary text-base font-normal"
-                          >Cash On Delivery</span
-                        >
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700">
+                          COD
+                        </span>
                       </div>
                     </div>
                   
@@ -5744,9 +5762,9 @@
   <script defer src="src/api/cart.js"></script>
   <script defer src="src/api/wishlist.js"></script>
   <script defer src="src/api/address.js"></script>
-  <script defer src="src/api/checkout.js"></script>
+  <script defer src="src/api/payment.js"></script>
   <script defer src="src/api/orders.js"></script>
-  <script defer src="src/api/payment.js"></script></body>
+  <script defer src="src/api/checkout.js"></script></body>
 
 <!-- Mirrored from storly.riveuptheme.com/checkout-1.html by HTTrack Website Copier/3.x [XR&CO'2014], Fri, 14 Aug 2026 08:13:16 GMT -->
 </html>
