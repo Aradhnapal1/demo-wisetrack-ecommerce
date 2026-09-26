@@ -503,7 +503,11 @@
               if (c.name) slugs.push(c.name.toLowerCase().trim(), slugify(c.name));
             });
           }
-          return f.categories.some(fc => slugs.includes(fc.toLowerCase().trim()));
+          return f.categories.some(fc => {
+            const fcClean = fc.toLowerCase().trim();
+            const fcSlug = slugify(fc);
+            return slugs.includes(fcClean) || slugs.includes(fcSlug) || slugs.some(s => s === fcClean || s === fcSlug || s.includes(fcClean) || fcClean.includes(s));
+          });
         });
       }
 
@@ -836,6 +840,31 @@
           countEl.textContent = `Showing ${from}–${to} of ${total} results`;
         }
       }
+
+      // Render Active Filter Indicator Bar if active category exists
+      const activeBars = document.querySelectorAll('#active-filter-badge-bar, .active-filter-badge-bar');
+      activeBars.forEach(activeBar => {
+        if (this.filters.categories && this.filters.categories.length > 0) {
+          let pillsHtml = `<div class="mb-5 flex flex-wrap items-center gap-2 p-3 bg-emerald-50/80 border border-emerald-200/90 rounded-xl shadow-2xs">
+            <span class="text-xs font-bold text-emerald-800 uppercase tracking-wider flex items-center gap-1.5">
+              <svg class="size-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
+              Active Filter:
+            </span>`;
+          this.filters.categories.forEach(cat => {
+            pillsHtml += `<span class="inline-flex items-center gap-1.5 px-3 py-1 bg-white text-primary-main rounded-lg text-xs font-bold shadow-2xs border border-emerald-300">
+              ${cat}
+              <button type="button" onclick="window.ProductAPI.clearCategoryFilter()" class="hover:text-red-500 text-gray-400 font-bold ml-1 cursor-pointer">✕</button>
+            </span>`;
+          });
+          pillsHtml += `<button type="button" onclick="window.ProductAPI.clearAllFilters()" class="text-xs font-semibold text-primary-main hover:underline ml-auto cursor-pointer">Clear All</button>
+          </div>`;
+          activeBar.innerHTML = pillsHtml;
+          activeBar.style.display = 'block';
+        } else {
+          activeBar.innerHTML = '';
+          activeBar.style.display = 'none';
+        }
+      });
 
       // Empty State HTML
       const emptyHtml = `<div class="col-span-full py-16 text-center">
@@ -1339,6 +1368,7 @@
     renderAll() {
       if (!this.products || this.products.length === 0) return;
 
+      this.renderFreshPicks();
       this.renderHomeBestSelling();
       this.renderHomeNewArrivals();
       this.renderHomeColumnSliders();
@@ -1350,6 +1380,43 @@
 
       if (window.WishlistAPI && typeof window.WishlistAPI.updateHeartButtons === 'function') {
         window.WishlistAPI.updateHeartButtons();
+      }
+    },
+
+    /**
+     * Home Page: Fresh Picks for You (Limited products with category-click navigation)
+     */
+    renderFreshPicks() {
+      const container = document.getElementById('fresh-picks-container');
+      if (!container) return;
+
+      // Ensure every product card has category click navigation
+      container.querySelectorAll('[data-product-card]').forEach(card => {
+        const cat = card.getAttribute('data-category') || 'Vegetables';
+        card.style.cursor = 'pointer';
+        card.onclick = (e) => {
+          if (e.target.closest('button, a, input, label, [data-prevent-nav]')) {
+            return;
+          }
+          window.location.href = 'top-banner-with-1-col.html?category=' + encodeURIComponent(cat);
+        };
+      });
+
+      // Synchronize with real catalog products if available
+      if (this.products && this.products.length > 0) {
+        container.querySelectorAll('[data-product-card]').forEach(card => {
+          const matchKey = (card.getAttribute('data-match') || card.getAttribute('data-name') || '').toLowerCase().trim();
+          if (!matchKey) return;
+          const found = this.products.find(p => (p.name || '').toLowerCase().includes(matchKey));
+          if (found) {
+            card.setAttribute('data-id', found.id);
+            if (found.category) card.setAttribute('data-category', found.category);
+            const priceEl = card.querySelector('[data-card-price]');
+            if (priceEl && found.price) {
+              priceEl.textContent = this.formatPrice(found.price);
+            }
+          }
+        });
       }
     },
 
@@ -1775,6 +1842,69 @@
       }
     }
   };
+
+  // Global Quick Add to Cart with event isolation
+  window.quickAddToCart = function(e, id, name, price, mrp, image, unit, category) {
+    if (e && typeof e.stopPropagation === 'function') {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+    const productData = {
+      id: String(id || 'prod-' + Date.now()),
+      itemId: String(id || 'prod-' + Date.now()),
+      name: name || 'Fresh Produce',
+      price: parseFloat(price) || 0,
+      mrp: parseFloat(mrp) || null,
+      image: image || 'src/images/home-1/best-selling-tabs/product-1.webp',
+      unit: unit || '1 kg',
+      category: category || 'Vegetables',
+      qty: 1
+    };
+
+    if (window.CartAPI) {
+      const existing = window.CartAPI.cart.find(i => String(i.id || i.itemId) === String(productData.id));
+      if (existing) {
+        existing.qty = (Number(existing.qty) || 1) + 1;
+      } else {
+        window.CartAPI.cart.push(productData);
+      }
+      window.CartAPI.saveToCache();
+      window.CartAPI.updateAllUI();
+      window.CartAPI.dispatchEvents();
+      if (typeof window.CartAPI.showToast === 'function') {
+        window.CartAPI.showToast((name || 'Product') + ' added to cart!');
+      }
+      window.CartAPI.syncWithApi();
+    } else {
+      alert((name || 'Product') + ' added to cart!');
+    }
+  };
+
+  // Global Quick Wishlist Toggle with event isolation
+  window.quickToggleWishlist = function(e, id, name, price, image, category) {
+    if (e && typeof e.stopPropagation === 'function') {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+    if (window.WishlistAPI && typeof window.WishlistAPI.toggle === 'function') {
+      window.WishlistAPI.toggle({
+        id: String(id || 'wish-' + Date.now()),
+        name: name || 'Fresh Item',
+        price: parseFloat(price) || 0,
+        image: image || '',
+        category: category || 'Vegetables'
+      });
+    }
+  };
+
+  // Global Click delegation: Any card with [data-product-card] navigates to category shop page
+  document.addEventListener('click', (e) => {
+    const card = e.target.closest('[data-product-card]');
+    if (card && !e.target.closest('button, a, input, label, [data-prevent-nav]')) {
+      const cat = card.getAttribute('data-category') || 'Vegetables';
+      window.location.href = 'top-banner-with-1-col.html?category=' + encodeURIComponent(cat);
+    }
+  });
 
   // Expose Globally
   window.ProductAPI = ProductAPI;

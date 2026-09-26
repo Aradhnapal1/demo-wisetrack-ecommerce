@@ -186,47 +186,14 @@
       if (!container || !this.banners || this.banners.length === 0) return;
 
       let html = '';
-      this.banners.forEach((b, idx) => {
-        const bgColors = [
-          'bg-primary-main',
-          'bg-emerald-800',
-          'bg-amber-900',
-          'bg-slate-900'
-        ];
-        const bg = bgColors[idx % bgColors.length];
+      this.banners.forEach((b) => {
+        const link = b.link || BANNER_CONFIG.SHOP_PAGE_URL;
 
         html += `
-        <div class="swiper-slide ${bg} py-16 lg:py-0 transition-colors duration-500">
-          <div class="custom-container">
-            <div class="grid grid-cols-1 items-center justify-between lg:grid-cols-12 lg:gap-16">
-              <!-- Text Content -->
-              <div class="wow animate__fadeInUp order-2 flex flex-col items-start text-left lg:order-1 lg:col-span-6 xl:col-span-6">
-                <div class="mb-3 inline-flex items-center gap-2">
-                  <span class="text-base font-medium tracking-wide text-white md:text-lg">${b.badgeLabel || 'Exclusive offer'}</span>
-                  <span class="bg-success-dark inline-flex h-5 items-center justify-center rounded-full px-2 py-1 text-xs font-bold text-gray-800 uppercase shadow-xs">${b.badge || '25% OFF'}</span>
-                </div>
-                <h1 class="font-tiktok-sans mb-3 max-w-2xl text-3xl font-bold text-white md:text-5xl lg:leading-16">
-                  ${b.title}
-                </h1>
-                <p class="mb-6 max-w-sm text-sm leading-relaxed text-white/90 md:max-w-md md:text-base">
-                  ${b.subtext}
-                </p>
-                <a class="group bg-success-light text-primary-main inline-flex items-center justify-center gap-2 rounded-lg px-5 py-3 text-sm font-semibold transition-all hover:bg-white shadow-md active:scale-95 md:text-base" href="${b.link || 'top-banner-with-1-col.html'}">
-                  <span>Shop Now</span>
-                  <svg class="size-4 transition-transform duration-500 group-hover:rotate-45 md:size-[22px]" fill="none" height="22" viewBox="0 0 22 22" width="22" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M15.5833 6.41406L5.5 16.4974" stroke="currentColor" stroke-linecap="round" stroke-width="1.5"></path>
-                    <path d="M10.0835 5.5H15.8335C16.1478 5.5 16.3049 5.5 16.4025 5.59763C16.5002 5.69526 16.5002 5.8524 16.5002 6.16667V11.9167" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></path>
-                  </svg>
-                </a>
-              </div>
-              <!-- Image Banner Content -->
-              <div class="order-1 flex items-center justify-center lg:order-2 lg:col-span-6 xl:col-span-6">
-                <div class="relative flex items-center justify-center p-4">
-                  <img src="${b.imageUrl}" class="max-h-[340px] lg:max-h-[460px] w-full object-cover rounded-2xl shadow-2xl border-2 border-white/20 transition-transform duration-500 hover:scale-102" alt="${b.title}" onerror="this.onerror=null;this.src='${FALLBACK_BANNERS[0].imageUrl}';" />
-                </div>
-              </div>
-            </div>
-          </div>
+        <div class="swiper-slide h-full w-full">
+          <a href="${link}" class="group block relative w-full h-full overflow-hidden rounded-2xl cursor-pointer">
+            <img src="${b.imageUrl}" alt="${b.title || 'Special Promotion'}" class="w-full h-full object-cover object-center transition-transform duration-700 group-hover:scale-[1.01]" onerror="this.onerror=null;this.src='${FALLBACK_BANNERS[0].imageUrl}';" />
+          </a>
         </div>`;
       });
 
@@ -355,7 +322,7 @@
               disableOnInteraction: false,
             },
             pagination: {
-              el: parent ? parent.querySelector('.swiper-pagination') : sliderEl.querySelector('.swiper-pagination'),
+              el: parent ? (parent.querySelector('.hero-pagination, .swiper-pagination') || '.hero-pagination') : '.hero-pagination',
               clickable: true,
             },
             navigation: {
